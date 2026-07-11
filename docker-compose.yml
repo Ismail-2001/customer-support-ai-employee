@@ -1,0 +1,9 @@
+services:
+  cs-agent:
+    build: .
+    ports:
+      - "8001:8001"
+    environment:
+      - GOOGLE_API_KEY=${GOOGLE_API_KEY}
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+    restart: unless-stopped

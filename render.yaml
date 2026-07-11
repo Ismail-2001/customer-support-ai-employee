@@ -1,0 +1,21 @@
+# render.yaml - Render Blueprint
+# Deploy to Render.com (Free Tier: 750 hours/month)
+#
+# Setup:
+# 1. Push agent to GitHub
+# 2. Go to render.com > New > Blueprint
+# 3. Connect your GitHub repo
+# 4. Render auto-detects this file
+
+services:
+  - type: web
+    name: cs-agent
+    runtime: python
+    plan: free
+    buildCommand: pip install -r requirements.txt
+    startCommand: uvicorn api.main:app --host 0.0.0.0 --port $PORT
+    envVars:
+      - key: GOOGLE_API_VALUE
+        sync: false  # Set manually in dashboard
+      - key: PYTHON_VERSION
+        value: "3.12.0"
