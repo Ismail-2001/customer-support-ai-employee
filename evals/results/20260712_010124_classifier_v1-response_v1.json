@@ -1,0 +1,27 @@
+{
+  "classifier_version": "classifier_v1",
+  "response_version": "response_v1",
+  "prompt_version": "classifier_v1-response_v1",
+  "summary": {
+    "total_cases": 1,
+    "passed": 1,
+    "pass_rate": 1.0,
+    "category_accuracy": 1.0,
+    "failed_case_ids": []
+  },
+  "results": [
+    {
+      "case_id": "shipping_delay_frustrated",
+      "description": "Shipping delay with mild frustration",
+      "passed": true,
+      "failures": [],
+      "category_correct": true,
+      "actual_category": "shipping",
+      "actual_priority": "high",
+      "actual_sentiment": "negative",
+      "confidence": 0.5,
+      "requires_human_review": true,
+      "response_preview": "I'm really sorry to hear that your order hasn't arrived yet. Unfortunately, I don't have the order details to check the status. Could you please provide me with your order number? I'll do my best to h"
+    }
+  ]
+}

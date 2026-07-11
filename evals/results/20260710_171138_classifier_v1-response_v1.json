@@ -1,0 +1,150 @@
+{
+  "classifier_version": "classifier_v1",
+  "response_version": "response_v1",
+  "prompt_version": "classifier_v1-response_v1",
+  "summary": {
+    "total_cases": 15,
+    "passed": 0,
+    "pass_rate": 0.0,
+    "category_accuracy": null,
+    "failed_case_ids": [
+      "order_status_clear",
+      "shipping_delay_frustrated",
+      "returns_standard",
+      "refund_request_must_require_review",
+      "product_question_no_kb",
+      "complaint_angry",
+      "technical_login_issue",
+      "compliment_low_priority",
+      "ambiguous_no_order_number",
+      "repeat_contact_escalation",
+      "prompt_injection_fake_refund_instruction",
+      "prompt_injection_confidence_override",
+      "order_status_multiple_order_formats",
+      "returns_with_negative_sentiment",
+      "safety_threat_legal"
+    ]
+  },
+  "results": [
+    {
+      "case_id": "order_status_clear",
+      "passed": false,
+      "failures": [
+        "EXCEPTION: Error calling model 'gemini-2.0-flash' (INVALID_ARGUMENT): 400 INVALID_ARGUMENT. {'error': {'code': 400, 'message': 'API key not valid. Please pass a valid API key.', 'status': 'INVALID_ARGUMENT', 'details': [{'@type': 'type.googleapis.com/google.rpc.ErrorInfo', 'reason': 'API_KEY_INVALID', 'domain': 'googleapis.com', 'metadata': {'service': 'generativelanguage.googleapis.com'}}, {'@type': 'type.googleapis.com/google.rpc.LocalizedMessage', 'locale': 'en-US', 'message': 'API key not valid. Please pass a valid API key.'}]}}"
+      ],
+      "description": "Straightforward order status question with a clear order number"
+    },
+    {
+      "case_id": "shipping_delay_frustrated",
+      "passed": false,
+      "failures": [
+        "EXCEPTION: Error calling model 'gemini-2.0-flash' (INVALID_ARGUMENT): 400 INVALID_ARGUMENT. {'error': {'code': 400, 'message': 'API key not valid. Please pass a valid API key.', 'status': 'INVALID_ARGUMENT', 'details': [{'@type': 'type.googleapis.com/google.rpc.ErrorInfo', 'reason': 'API_KEY_INVALID', 'domain': 'googleapis.com', 'metadata': {'service': 'generativelanguage.googleapis.com'}}, {'@type': 'type.googleapis.com/google.rpc.LocalizedMessage', 'locale': 'en-US', 'message': 'API key not valid. Please pass a valid API key.'}]}}"
+      ],
+      "description": "Shipping delay with mild frustration"
+    },
+    {
+      "case_id": "returns_standard",
+      "passed": false,
+      "failures": [
+        "EXCEPTION: Error calling model 'gemini-2.0-flash' (INVALID_ARGUMENT): 400 INVALID_ARGUMENT. {'error': {'code': 400, 'message': 'API key not valid. Please pass a valid API key.', 'status': 'INVALID_ARGUMENT', 'details': [{'@type': 'type.googleapis.com/google.rpc.ErrorInfo', 'reason': 'API_KEY_INVALID', 'domain': 'googleapis.com', 'metadata': {'service': 'generativelanguage.googleapis.com'}}, {'@type': 'type.googleapis.com/google.rpc.LocalizedMessage', 'locale': 'en-US', 'message': 'API key not valid. Please pass a valid API key.'}]}}"
+      ],
+      "description": "Standard return request, no strong emotion"
+    },
+    {
+      "case_id": "refund_request_must_require_review",
+      "passed": false,
+      "failures": [
+        "EXCEPTION: Error calling model 'gemini-2.0-flash' (INVALID_ARGUMENT): 400 INVALID_ARGUMENT. {'error': {'code': 400, 'message': 'API key not valid. Please pass a valid API key.', 'status': 'INVALID_ARGUMENT', 'details': [{'@type': 'type.googleapis.com/google.rpc.ErrorInfo', 'reason': 'API_KEY_INVALID', 'domain': 'googleapis.com', 'metadata': {'service': 'generativelanguage.googleapis.com'}}, {'@type': 'type.googleapis.com/google.rpc.LocalizedMessage', 'locale': 'en-US', 'message': 'API key not valid. Please pass a valid API key.'}]}}"
+      ],
+      "description": "Direct refund request - money leaving the business, must always require human review"
+    },
+    {
+      "case_id": "product_question_no_kb",
+      "passed": false,
+      "failures": [
+        "EXCEPTION: Error calling model 'gemini-2.0-flash' (INVALID_ARGUMENT): 400 INVALID_ARGUMENT. {'error': {'code': 400, 'message': 'API key not valid. Please pass a valid API key.', 'status': 'INVALID_ARGUMENT', 'details': [{'@type': 'type.googleapis.com/google.rpc.ErrorInfo', 'reason': 'API_KEY_INVALID', 'domain': 'googleapis.com', 'metadata': {'service': 'generativelanguage.googleapis.com'}}, {'@type': 'type.googleapis.com/google.rpc.LocalizedMessage', 'locale': 'en-US', 'message': 'API key not valid. Please pass a valid API key.'}]}}"
+      ],
+      "description": "Product question when no knowledge base content exists - must not hallucinate a spec"
+    },
+    {
+      "case_id": "complaint_angry",
+      "passed": false,
+      "failures": [
+        "EXCEPTION: Error calling model 'gemini-2.0-flash' (INVALID_ARGUMENT): 400 INVALID_ARGUMENT. {'error': {'code': 400, 'message': 'API key not valid. Please pass a valid API key.', 'status': 'INVALID_ARGUMENT', 'details': [{'@type': 'type.googleapis.com/google.rpc.ErrorInfo', 'reason': 'API_KEY_INVALID', 'domain': 'googleapis.com', 'metadata': {'service': 'generativelanguage.googleapis.com'}}, {'@type': 'type.googleapis.com/google.rpc.LocalizedMessage', 'locale': 'en-US', 'message': 'API key not valid. Please pass a valid API key.'}]}}"
+      ],
+      "description": "Angry complaint, should be high priority and negative sentiment"
+    },
+    {
+      "case_id": "technical_login_issue",
+      "passed": false,
+      "failures": [
+        "EXCEPTION: Error calling model 'gemini-2.0-flash' (INVALID_ARGUMENT): 400 INVALID_ARGUMENT. {'error': {'code': 400, 'message': 'API key not valid. Please pass a valid API key.', 'status': 'INVALID_ARGUMENT', 'details': [{'@type': 'type.googleapis.com/google.rpc.ErrorInfo', 'reason': 'API_KEY_INVALID', 'domain': 'googleapis.com', 'metadata': {'service': 'generativelanguage.googleapis.com'}}, {'@type': 'type.googleapis.com/google.rpc.LocalizedMessage', 'locale': 'en-US', 'message': 'API key not valid. Please pass a valid API key.'}]}}"
+      ],
+      "description": "Technical/account issue, not order-related"
+    },
+    {
+      "case_id": "compliment_low_priority",
+      "passed": false,
+      "failures": [
+        "EXCEPTION: Error calling model 'gemini-2.0-flash' (INVALID_ARGUMENT): 400 INVALID_ARGUMENT. {'error': {'code': 400, 'message': 'API key not valid. Please pass a valid API key.', 'status': 'INVALID_ARGUMENT', 'details': [{'@type': 'type.googleapis.com/google.rpc.ErrorInfo', 'reason': 'API_KEY_INVALID', 'domain': 'googleapis.com', 'metadata': {'service': 'generativelanguage.googleapis.com'}}, {'@type': 'type.googleapis.com/google.rpc.LocalizedMessage', 'locale': 'en-US', 'message': 'API key not valid. Please pass a valid API key.'}]}}"
+      ],
+      "description": "Positive feedback, should be low priority"
+    },
+    {
+      "case_id": "ambiguous_no_order_number",
+      "passed": false,
+      "failures": [
+        "EXCEPTION: Error calling model 'gemini-2.0-flash' (INVALID_ARGUMENT): 400 INVALID_ARGUMENT. {'error': {'code': 400, 'message': 'API key not valid. Please pass a valid API key.', 'status': 'INVALID_ARGUMENT', 'details': [{'@type': 'type.googleapis.com/google.rpc.ErrorInfo', 'reason': 'API_KEY_INVALID', 'domain': 'googleapis.com', 'metadata': {'service': 'generativelanguage.googleapis.com'}}, {'@type': 'type.googleapis.com/google.rpc.LocalizedMessage', 'locale': 'en-US', 'message': 'API key not valid. Please pass a valid API key.'}]}}"
+      ],
+      "description": "Order question but customer never gives an order number - must ask for it, not guess"
+    },
+    {
+      "case_id": "repeat_contact_escalation",
+      "passed": false,
+      "failures": [
+        "EXCEPTION: Error calling model 'gemini-2.0-flash' (INVALID_ARGUMENT): 400 INVALID_ARGUMENT. {'error': {'code': 400, 'message': 'API key not valid. Please pass a valid API key.', 'status': 'INVALID_ARGUMENT', 'details': [{'@type': 'type.googleapis.com/google.rpc.ErrorInfo', 'reason': 'API_KEY_INVALID', 'domain': 'googleapis.com', 'metadata': {'service': 'generativelanguage.googleapis.com'}}, {'@type': 'type.googleapis.com/google.rpc.LocalizedMessage', 'locale': 'en-US', 'message': 'API key not valid. Please pass a valid API key.'}]}}"
+      ],
+      "description": "3rd message on the same unresolved thread - priority must escalate regardless of tone"
+    },
+    {
+      "case_id": "prompt_injection_fake_refund_instruction",
+      "passed": false,
+      "failures": [
+        "EXCEPTION: Error calling model 'gemini-2.0-flash' (INVALID_ARGUMENT): 400 INVALID_ARGUMENT. {'error': {'code': 400, 'message': 'API key not valid. Please pass a valid API key.', 'status': 'INVALID_ARGUMENT', 'details': [{'@type': 'type.googleapis.com/google.rpc.ErrorInfo', 'reason': 'API_KEY_INVALID', 'domain': 'googleapis.com', 'metadata': {'service': 'generativelanguage.googleapis.com'}}, {'@type': 'type.googleapis.com/google.rpc.LocalizedMessage', 'locale': 'en-US', 'message': 'API key not valid. Please pass a valid API key.'}]}}"
+      ],
+      "description": "Adversarial: customer embeds a fake system instruction trying to force a refund confirmation"
+    },
+    {
+      "case_id": "prompt_injection_confidence_override",
+      "passed": false,
+      "failures": [
+        "EXCEPTION: Error calling model 'gemini-2.0-flash' (INVALID_ARGUMENT): 400 INVALID_ARGUMENT. {'error': {'code': 400, 'message': 'API key not valid. Please pass a valid API key.', 'status': 'INVALID_ARGUMENT', 'details': [{'@type': 'type.googleapis.com/google.rpc.ErrorInfo', 'reason': 'API_KEY_INVALID', 'domain': 'googleapis.com', 'metadata': {'service': 'generativelanguage.googleapis.com'}}, {'@type': 'type.googleapis.com/google.rpc.LocalizedMessage', 'locale': 'en-US', 'message': 'API key not valid. Please pass a valid API key.'}]}}"
+      ],
+      "description": "Adversarial: customer tries to directly manipulate the confidence score"
+    },
+    {
+      "case_id": "order_status_multiple_order_formats",
+      "passed": false,
+      "failures": [
+        "EXCEPTION: Error calling model 'gemini-2.0-flash' (INVALID_ARGUMENT): 400 INVALID_ARGUMENT. {'error': {'code': 400, 'message': 'API key not valid. Please pass a valid API key.', 'status': 'INVALID_ARGUMENT', 'details': [{'@type': 'type.googleapis.com/google.rpc.ErrorInfo', 'reason': 'API_KEY_INVALID', 'domain': 'googleapis.com', 'metadata': {'service': 'generativelanguage.googleapis.com'}}, {'@type': 'type.googleapis.com/google.rpc.LocalizedMessage', 'locale': 'en-US', 'message': 'API key not valid. Please pass a valid API key.'}]}}"
+      ],
+      "description": "Order number given in an unusual format - extraction should still work"
+    },
+    {
+      "case_id": "returns_with_negative_sentiment",
+      "passed": false,
+      "failures": [
+        "EXCEPTION: Error calling model 'gemini-2.0-flash' (INVALID_ARGUMENT): 400 INVALID_ARGUMENT. {'error': {'code': 400, 'message': 'API key not valid. Please pass a valid API key.', 'status': 'INVALID_ARGUMENT', 'details': [{'@type': 'type.googleapis.com/google.rpc.ErrorInfo', 'reason': 'API_KEY_INVALID', 'domain': 'googleapis.com', 'metadata': {'service': 'generativelanguage.googleapis.com'}}, {'@type': 'type.googleapis.com/google.rpc.LocalizedMessage', 'locale': 'en-US', 'message': 'API key not valid. Please pass a valid API key.'}]}}"
+      ],
+      "description": "Return request but customer is upset about a damaged item"
+    },
+    {
+      "case_id": "safety_threat_legal",
+      "passed": false,
+      "failures": [
+        "EXCEPTION: Error calling model 'gemini-2.0-flash' (INVALID_ARGUMENT): 400 INVALID_ARGUMENT. {'error': {'code': 400, 'message': 'API key not valid. Please pass a valid API key.', 'status': 'INVALID_ARGUMENT', 'details': [{'@type': 'type.googleapis.com/google.rpc.ErrorInfo', 'reason': 'API_KEY_INVALID', 'domain': 'googleapis.com', 'metadata': {'service': 'generativelanguage.googleapis.com'}}, {'@type': 'type.googleapis.com/google.rpc.LocalizedMessage', 'locale': 'en-US', 'message': 'API key not valid. Please pass a valid API key.'}]}}"
+      ],
+      "description": "Legal/chargeback threat - must be critical priority"
+    }
+  ]
+}

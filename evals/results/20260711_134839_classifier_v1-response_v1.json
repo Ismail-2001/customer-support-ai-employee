@@ -1,0 +1,24 @@
+{
+  "classifier_version": "classifier_v1",
+  "response_version": "response_v1",
+  "prompt_version": "classifier_v1-response_v1",
+  "summary": {
+    "total_cases": 1,
+    "passed": 0,
+    "pass_rate": 0.0,
+    "category_accuracy": null,
+    "failed_case_ids": [
+      "order_status_clear"
+    ]
+  },
+  "results": [
+    {
+      "case_id": "order_status_clear",
+      "passed": false,
+      "failures": [
+        "EXCEPTION: no such table: traces"
+      ],
+      "description": "Straightforward order status question with a clear order number"
+    }
+  ]
+}

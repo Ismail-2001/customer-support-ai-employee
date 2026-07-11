@@ -32,8 +32,7 @@ Thumbs.db
 # Pytest
 .pytest_cache/
 
-# Eval results (keep historical reports, ignore auto-saved ones)
-evals/results/*.json
+
 
 # Logs
 *.log

@@ -1,0 +1,24 @@
+{
+  "classifier_version": "classifier_v1",
+  "response_version": "response_v1",
+  "prompt_version": "classifier_v1-response_v1",
+  "summary": {
+    "total_cases": 1,
+    "passed": 0,
+    "pass_rate": 0.0,
+    "category_accuracy": null,
+    "failed_case_ids": [
+      "order_status_clear"
+    ]
+  },
+  "results": [
+    {
+      "case_id": "order_status_clear",
+      "passed": false,
+      "failures": [
+        "EXCEPTION: Error code: 400 - {'error': {'message': 'google/gemini-2.0-flash is not a valid model ID', 'code': 400}, 'user_id': 'user_3GLj3y0O5C0qgqHcj9tbPGcqStw'}"
+      ],
+      "description": "Straightforward order status question with a clear order number"
+    }
+  ]
+}
