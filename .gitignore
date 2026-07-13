@@ -32,6 +32,10 @@ Thumbs.db
 # Pytest
 .pytest_cache/
 
+# Dashboard (React/Vite)
+dashboard/node_modules/
+dashboard/*.tsbuildinfo
+
 
 
 # Logs
