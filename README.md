@@ -1,9 +1,6 @@
-# Customer Support AI Employee
+# Customer Support AI Employee — for Shopify
 
-AI-powered customer support automation for ecommerce. Classifies incoming tickets,
-pulls real order data from Shopify, drafts a grounded reply, and syncs with Gorgias —
-with a confidence-gated auto-send policy so nothing goes to a customer unreviewed
-until you trust it.
+Hire an AI that already knows your Shopify store. No training, no setup cost, no monthly SaaS fee — just deploy and watch it answer order status questions, handle returns, suggest refunds, and escalate to you when it should.
 
 ## Memory (conversation threads)
 
@@ -362,13 +359,13 @@ Still a stub, by design — build these next as the client roster grows:
 - The eval dataset (15 cases) is a starting skeleton, not comprehensive coverage — it should
   grow from real edited tickets over time, per the Evals section above
 
-## Pricing
+## Pricing — for Shopify store owners
 
-| Plan | Price | Includes |
-|------|-------|----------|
-| Starter | $1,500 setup | 1 agent, basic integration |
-| Growth | $3,000 setup + $1,000/mo | Full integration, support |
-| Enterprise | Custom | Multi-agent, SLA |
+| Plan | For who | One-time setup | Monthly |
+|------|---------|:-:|:-:|
+| Solo | 1 store, you are support | $1,500 | $0 |
+| Growing | 1 store, you have a team | $3,000 | $1,000 |
+| Enterprise | Multiple stores | Custom | Custom |
 
 ## Contact
 
