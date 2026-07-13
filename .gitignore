@@ -35,8 +35,6 @@ Thumbs.db
 # Dashboard (React/Vite)
 dashboard/node_modules/
 dashboard/*.tsbuildinfo
-
-
-
-# Logs
+dashboard/vite.config.js
+dashboard/vite.config.d.ts
 *.log
