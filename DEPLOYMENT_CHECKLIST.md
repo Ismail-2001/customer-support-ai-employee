@@ -14,6 +14,13 @@
 3. Connect your GitHub account
 4. Select **Ismail-2001/customer-support-ai-employee**
 5. Render auto-detects `render.yaml` → click **Apply**
+6. Render will create:
+   - The **`cs-agent`** web service (plan: free)
+   - The **`cs-agent-data`** persistent disk (1 GB, mounted at `/data`)
+   
+   > The disk is what makes the SQLite DB survive deploys. Confirm it appears
+   > under the service's **Disks** tab before going live. Without it, every
+   > deploy wipes tickets, the audit log, and the cost ledger.
 
 ---
 
@@ -43,7 +50,7 @@ The Blueprint will pre-fill all vars from `render.yaml`. **Every var marked `syn
 - `AUTO_SEND_ENABLED` = `false`
 - `AUTO_SEND_MIN_CONFIDENCE` = `0.85`
 - `AUTO_SEND_BLOCKED_CATEGORIES` = `refund,complaint,legal,other`
-- `DB_PATH` = `cs_agent.db`
+- `DB_PATH` = `/data/cs_agent.db` (on the persistent disk)
 - `ENV` = `production`
 - `REQUIRE_API_KEY` = `true`
 - `ALLOWED_ORIGINS` = `""`
@@ -98,7 +105,23 @@ Expected: all 4 checks PASS
 
 ---
 
-## 6. (Optional) Deploy Operator Dashboard
+## 5b. Live Integration Verification (do this BEFORE trusting auto-send)
+
+The unit tests use fake Shopify/Gorgias. Before launch you must prove the real
+integrations work against production credentials:
+
+1. **Shopify lookup** — send a real ticket containing a real order number;
+   confirm the reply includes correct order status/items (check Render logs).
+2. **Gorgias round-trip** — create a test ticket in Gorgias, confirm the agent
+   receives the webhook and posts a reply/internal note.
+3. **Idempotency** — re-send the same Gorgias webhook payload; confirm it is
+   processed **once** (no duplicate reply). Check the audit row count.
+4. **Cost cap** — temporarily set `DAILY_COST_CAP_USD=0.01`, send traffic,
+   confirm `AUTO_SEND` is force-disabled and replies stop at the cap.
+
+Only after all four pass should you consider flipping `AUTO_SEND_ENABLED=true`.
+
+---## 6. (Optional) Deploy Operator Dashboard
 
 Separate Render **Static Site**:
 - Build: `cd dashboard && npm install && npm run build`
@@ -107,11 +130,15 @@ Separate Render **Static Site**:
 
 ---
 
-## ⚠️ Free Tier Warning
+## ⚠️ Free Tier Notes
 
-**Render's free tier does NOT provide a persistent disk.**  
-The SQLite database (`cs_agent.db`) is **wiped on every redeploy**.  
-This is expected until you upgrade to a paid plan with a persistent disk.
+- The web service runs on Render's **free plan** (spins down after 15 min idle;
+  first request after idle takes ~30–60 s to wake).
+- The **`cs-agent-data` disk attached in `render.yaml` keeps the SQLite DB
+  alive across deploys and restarts** — this is included and required. Do not
+  remove the `disk:` block or you lose audit/idempotency history on every deploy.
+- Keep `AUTO_SEND_ENABLED=false` for the first 1–2 weeks; review drafts in
+  Gorgias, then flip to `true` once you trust the agent on that client.
 
 ---
 

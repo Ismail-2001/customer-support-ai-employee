@@ -14,6 +14,16 @@ services:
     plan: free
     buildCommand: pip install -r requirements.txt
     startCommand: uvicorn api.main:app --host 0.0.0.0 --port $PORT
+    # Persistent disk so the SQLite DB (tickets, audit log, human-review
+    # state, cost ledger) survives deploys and restarts. WITHOUT this, every
+    # deploy wipes all history and breaks idempotency/replay guarantees.
+    # NOTE: on Render's free plan, disk is billed only when attached; a 1GB
+    # disk is plenty for SQLite at this scale.
+    disk:
+      name: cs-agent-data
+      mountPath: /data
+      sizeGB: 1
+    healthCheckPath: /health
     envVars:
       # ── Tenant ──────────────────────────────────────────
       - key: TENANT_NAME
@@ -54,8 +64,10 @@ services:
         value: "refund,complaint,legal,other"
 
       # ── Storage ─────────────────────────────────────────
+      # Lives on the persistent disk (mounted at /data) so data survives
+      # deploys/restarts. Do NOT point this at the ephemeral root FS.
       - key: DB_PATH
-        value: cs_agent.db
+        value: /data/cs_agent.db
       - key: ENV
         value: production
 
