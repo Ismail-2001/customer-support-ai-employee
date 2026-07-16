@@ -1,0 +1,143 @@
+# DEPLOYMENT CHECKLIST — cs-agent on Render
+
+## Prerequisites
+- GitHub account with `customer-support-ai-employee` repo pushed
+- Render account (sign up at https://render.com)
+- Shopify store, Gorgias account, OpenRouter API key ready
+
+---
+
+## 1. Create Blueprint on Render
+
+1. Go to https://dashboard.render.com
+2. Click **New +** → **Blueprint**
+3. Connect your GitHub account
+4. Select **Ismail-2001/customer-support-ai-employee**
+5. Render auto-detects `render.yaml` → click **Apply**
+
+---
+
+## 2. Set Environment Variables (Manual Entry Required)
+
+The Blueprint will pre-fill all vars from `render.yaml`. **Every var marked `sync: false` MUST be typed in manually** in Render's dashboard. Do NOT commit secrets.
+
+### Required `sync: false` Variables (copy from your `.env`):
+
+| Variable | Where to Get It |
+|----------|-----------------|
+| `TENANT_NAME` | Your label for this deployment (e.g., `acme-corp-support`) |
+| `OPENROUTER_API_KEY` | https://openrouter.ai/keys (create key, copy) |
+| `ANTHROPIC_API_KEY` | https://console.anthropic.com/ (optional, fallback) |
+| `SHOPIFY_SHOP_DOMAIN` | Your store admin URL → `your-store.myshopify.com` |
+| `SHOPIFY_ACCESS_TOKEN` | Shopify Admin → Settings → Apps and sales channels → Develop apps → Create app → `read_orders` scope → Install → Admin API access token |
+| `GORGIAS_DOMAIN` | Your Gorgias subdomain (e.g., `your-store` from `your-store.gorgias.com`) |
+| `GORGIAS_EMAIL` | The email you log into Gorgias with |
+| `GORGIAS_API_KEY` | Gorgias → Settings → REST API → Generate API Key |
+| `GORGIAS_WEBHOOK_SECRET` | Any random string; **must match** the `x-webhook-secret` header you set in Gorgias webhook config |
+| `API_KEY` | Generate locally: `python3 -c "import secrets; print(secrets.token_urlsafe(32))"` |
+| `INBOUND_WEBHOOK_SECRET` | Same generation method as `API_KEY` |
+
+### Pre-filled `sync: true` / `value:` Variables (auto-set by Blueprint):
+- `OPENROUTER_MODEL` = `openai/gpt-4o-mini`
+- `FALLBACK_MODEL` = `claude-haiku-4-5-20251001`
+- `AUTO_SEND_ENABLED` = `false`
+- `AUTO_SEND_MIN_CONFIDENCE` = `0.85`
+- `AUTO_SEND_BLOCKED_CATEGORIES` = `refund,complaint,legal,other`
+- `DB_PATH` = `cs_agent.db`
+- `ENV` = `production`
+- `REQUIRE_API_KEY` = `true`
+- `ALLOWED_ORIGINS` = `""`
+- `RATE_LIMIT_PER_MINUTE` = `60`
+- `REFUND_RATE_LIMIT_PER_MINUTE` = `10`
+- `PYTHON_VERSION` = `3.12.0`
+
+---
+
+## 3. Deploy & Verify
+
+1. Click **Deploy** — wait 2–4 min for build
+2. Note the service URL: `https://cs-agent-xxxx.onrender.com`
+
+### Quick Health Check
+```bash
+# Public health
+curl https://cs-agent-xxxx.onrender.com/health
+
+# Authenticated health (requires API_KEY)
+curl https://cs-agent-xxxx.onrender.com/support/health \
+  -H "X-API-Key: YOUR_API_KEY"
+```
+
+Expected: both return `{"status":"healthy",...}`
+
+---
+
+## 4. Connect Gorgias Webhooks
+
+In Gorgias: **Settings → REST API → Webhooks**
+
+### Webhook 1: Ticket Created
+- **URL**: `https://cs-agent-xxxx.onrender.com/support/webhooks/gorgias/ticket-created`
+- **Events**: `ticket_created`
+- **Headers**: `x-webhook-secret: YOUR_GORGIAS_WEBHOOK_SECRET`
+
+### Webhook 2: Message Created
+- **URL**: `https://cs-agent-xxxx.onrender.com/support/webhooks/gorgias/message-created`
+- **Events**: `message_created`
+- **Headers**: `x-webhook-secret: YOUR_GORGIAS_WEBHOOK_SECRET`
+
+---
+
+## 5. Run Post-Deploy Smoke Test
+
+```bash
+./scripts/smoke_test.sh https://cs-agent-xxxx.onrender.com YOUR_API_KEY
+```
+
+Expected: all 4 checks PASS
+
+---
+
+## 6. (Optional) Deploy Operator Dashboard
+
+Separate Render **Static Site**:
+- Build: `cd dashboard && npm install && npm run build`
+- Publish dir: `dashboard/dist`
+- Env var: `VITE_API_BASE_URL=https://cs-agent-xxxx.onrender.com`
+
+---
+
+## ⚠️ Free Tier Warning
+
+**Render's free tier does NOT provide a persistent disk.**  
+The SQLite database (`cs_agent.db`) is **wiped on every redeploy**.  
+This is expected until you upgrade to a paid plan with a persistent disk.
+
+---
+
+## Troubleshooting
+
+| Symptom | Check |
+|---------|-------|
+| Build fails | `render.yaml` `buildCommand` matches `pip install -r requirements.txt` |
+| 500 on health | Check logs → usually missing `TENANT_NAME` or `OPENROUTER_API_KEY` |
+| Gorgias 401 | Webhook secret mismatch — must match exactly |
+| Shopify 404 | Wrong `SHOPIFY_SHOP_DOMAIN` or missing `read_orders` scope |
+| Dashboard blank | `VITE_API_BASE_URL` must point to the deployed API URL |
+
+---
+
+## Quick Commands
+
+```bash
+# Local dry-run (mirrors Render build)
+python3 -m venv /tmp/render-test && source /tmp/render-test/bin/activate
+pip install -r requirements.txt
+uvicorn api.main:app --host 0.0.0.0 --port 8000
+
+# Local smoke test
+./scripts/smoke_test.sh http://localhost:8000 test-key
+
+# Check env sync locally
+python scripts/check_env_sync.py
+```

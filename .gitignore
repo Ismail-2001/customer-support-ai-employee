@@ -9,6 +9,8 @@ build/
 # Virtual environment
 venv/
 .venv/
+.venv*/
+mcp_server/.venv*/
 
 # Environment
 .env

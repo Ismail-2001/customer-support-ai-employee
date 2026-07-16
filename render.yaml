@@ -15,17 +15,70 @@ services:
     buildCommand: pip install -r requirements.txt
     startCommand: uvicorn api.main:app --host 0.0.0.0 --port $PORT
     envVars:
-      - key: GOOGLE_API_KEY
-        sync: false  # Set manually in dashboard
+      # ── Tenant ──────────────────────────────────────────
+      - key: TENANT_NAME
+        sync: false
+
+      # ── LLM (primary + fallback) ────────────────────────
+      - key: OPENROUTER_API_KEY
+        sync: false
+      - key: OPENROUTER_MODEL
+        value: openai/gpt-4o-mini
+      - key: ANTHROPIC_API_KEY
+        sync: false
+      - key: FALLBACK_MODEL
+        value: claude-haiku-4-5-20251001
+
+      # ── Shopify ─────────────────────────────────────────
+      - key: SHOPIFY_SHOP_DOMAIN
+        sync: false
+      - key: SHOPIFY_ACCESS_TOKEN
+        sync: false
+
+      # ── Gorgias ─────────────────────────────────────────
+      - key: GORGIAS_DOMAIN
+        sync: false
+      - key: GORGIAS_EMAIL
+        sync: false
+      - key: GORGIAS_API_KEY
+        sync: false
+      - key: GORGIAS_WEBHOOK_SECRET
+        sync: false
+
+      # ── Automation policy ───────────────────────────────
+      - key: AUTO_SEND_ENABLED
+        value: "false"
+      - key: AUTO_SEND_MIN_CONFIDENCE
+        value: "0.85"
+      - key: AUTO_SEND_BLOCKED_CATEGORIES
+        value: "refund,complaint,legal,other"
+
+      # ── Storage ─────────────────────────────────────────
+      - key: DB_PATH
+        value: cs_agent.db
+      - key: ENV
+        value: production
+
+      # ── API Security ────────────────────────────────────
+      - key: API_KEY
+        sync: false
+      - key: REQUIRE_API_KEY
+        value: "true"
+      - key: ALLOWED_ORIGINS
+        value: ""
+      - key: RATE_LIMIT_PER_MINUTE
+        value: "60"
+      - key: REFUND_RATE_LIMIT_PER_MINUTE
+        value: "10"
+      - key: RESEND_RATE_LIMIT_PER_MINUTE
+        value: "10"
+      - key: INBOUND_WEBHOOK_SECRET
+        sync: false
+
+      # ── Cost governance ───────────────────────────────────
+      - key: DAILY_COST_CAP_USD
+        value: "5.0"
+
+      # ── Python runtime (Render only, not in .env.example) ──
       - key: PYTHON_VERSION
         value: "3.12.0"
-      - key: TENANT_NAME
-        sync: false  # Required - set to client name
-      - key: API_KEY
-        sync: false  # Required - generate with: python3 -c "import secrets; print(secrets.token_urlsafe(32))"
-      - key: SHOPIFY_ACCESS_TOKEN
-        sync: false  # Required for order lookups
-      - key: SHOPIFY_SHOP_DOMAIN
-        sync: false  # Required - e.g. your-store.myshopify.com
-      - key: GORGIAS_API_KEY
-        sync: false  # Required for ticket sync
