@@ -14,13 +14,6 @@
 3. Connect your GitHub account
 4. Select **Ismail-2001/customer-support-ai-employee**
 5. Render auto-detects `render.yaml` → click **Apply**
-6. Render will create:
-   - The **`cs-agent`** web service (plan: free)
-   - The **`cs-agent-data`** persistent disk (1 GB, mounted at `/data`)
-   
-   > The disk is what makes the SQLite DB survive deploys. Confirm it appears
-   > under the service's **Disks** tab before going live. Without it, every
-   > deploy wipes tickets, the audit log, and the cost ledger.
 
 ---
 
@@ -50,7 +43,7 @@ The Blueprint will pre-fill all vars from `render.yaml`. **Every var marked `syn
 - `AUTO_SEND_ENABLED` = `false`
 - `AUTO_SEND_MIN_CONFIDENCE` = `0.85`
 - `AUTO_SEND_BLOCKED_CATEGORIES` = `refund,complaint,legal,other`
-- `DB_PATH` = `/data/cs_agent.db` (on the persistent disk)
+- `DB_PATH` = `cs_agent.db` (ephemeral — wiped on deploy)
 - `ENV` = `production`
 - `REQUIRE_API_KEY` = `true`
 - `ALLOWED_ORIGINS` = `""`
@@ -121,7 +114,9 @@ integrations work against production credentials:
 
 Only after all four pass should you consider flipping `AUTO_SEND_ENABLED=true`.
 
----## 6. (Optional) Deploy Operator Dashboard
+---
+
+## 6. (Optional) Deploy Operator Dashboard
 
 Separate Render **Static Site**:
 - Build: `cd dashboard && npm install && npm run build`
@@ -134,9 +129,11 @@ Separate Render **Static Site**:
 
 - The web service runs on Render's **free plan** (spins down after 15 min idle;
   first request after idle takes ~30–60 s to wake).
-- The **`cs-agent-data` disk attached in `render.yaml` keeps the SQLite DB
-  alive across deploys and restarts** — this is included and required. Do not
-  remove the `disk:` block or you lose audit/idempotency history on every deploy.
+- **No persistent disk on free plan** — Render does not allow disk attachments
+  for free-tier web services. This means the SQLite DB is **ephemeral**: every
+  deploy or restart wipes all tickets, audit history, and the cost ledger.
+  Acceptable for MVP/evaluation. Upgrade to Render **Starter** ($7/month) and
+  re-add a `disk:` block when you need data to survive deploys.
 - Keep `AUTO_SEND_ENABLED=false` for the first 1–2 weeks; review drafts in
   Gorgias, then flip to `true` once you trust the agent on that client.
 
