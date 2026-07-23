@@ -6,6 +6,7 @@ chain-of-responsibility — the call sites in classifier.py and response_engine.
 stay the same.
 """
 
+import asyncio
 from typing import Any, Dict, List, Optional, Tuple
 
 import httpx
@@ -23,15 +24,16 @@ logger = structlog.get_logger(__name__)
 
 
 def _is_transient_llm_error(exc: BaseException) -> bool:
-    """Retry on network blips, timeouts, and server-side errors — never on 4xx."""
+    """Retry on network blips, timeouts, rate limits, and 5xx — never on 4xx (except 429)."""
     if isinstance(exc, httpx.TimeoutException):
         return True
     if isinstance(exc, httpx.TransportError):
         return True
-    if isinstance(exc, httpx.HTTPStatusError) and 500 <= exc.response.status_code < 600:
-        return True
-    if hasattr(exc, "status_code") and isinstance(getattr(exc, "status_code"), int) and 500 <= exc.status_code < 600:
-        return True
+    if isinstance(exc, httpx.HTTPStatusError):
+        return exc.response.status_code == 429 or 500 <= exc.response.status_code < 600
+    status = getattr(exc, "status_code", None)
+    if isinstance(status, int):
+        return status == 429 or 500 <= status < 600
     return False
 
 
@@ -152,7 +154,7 @@ def get_embeddings_client() -> GoogleGenerativeAIEmbeddings:
     return _embeddings_client
 
 
-async def embed_text(text: str) -> List[float]:
+async def embed_text(text: str, timeout: float = 15.0) -> List[float]:
     client = get_embeddings_client()
-    return await client.aembed_query(text)
+    return await asyncio.wait_for(client.aembed_query(text), timeout=timeout)
 

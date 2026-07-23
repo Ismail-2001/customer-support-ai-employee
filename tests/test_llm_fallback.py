@@ -152,5 +152,10 @@ async def test_fallback_classifier_records_primary_model_name(monkeypatch):
 
     assert record_mock.await_count == 1
     call_kwargs = record_mock.call_args.kwargs
-    assert call_kwargs["model"] == settings.GEMINI_MODEL
+    expected = (
+        settings.GROQ_MODEL if settings.GROQ_API_KEY
+        else settings.GEMINI_MODEL if settings.GOOGLE_API_KEY
+        else settings.OPENROUTER_MODEL
+    )
+    assert call_kwargs["model"] == expected
     classifier.fallback_llm.ainvoke.assert_not_awaited()

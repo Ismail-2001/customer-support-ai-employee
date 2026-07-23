@@ -40,7 +40,9 @@ class TestLlmRetryPredicate:
         assert _is_transient_llm_error(_http_error(403)) is False
         assert _is_transient_llm_error(_http_error(404)) is False
         assert _is_transient_llm_error(_http_error(422)) is False
-        assert _is_transient_llm_error(_http_error(429)) is False
+
+    def test_429_is_retryable(self):
+        assert _is_transient_llm_error(_http_error(429)) is True
 
     def test_value_error_is_not_retryable(self):
         assert _is_transient_llm_error(ValueError("bad")) is False

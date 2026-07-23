@@ -590,39 +590,16 @@ async def _dispatch_gorgias_reply(gorgias_ticket_id: Optional[str], decision) ->
 
 @router.get("/analytics", response_model=SupportAnalytics)
 async def get_support_analytics(days: int = Query(7, ge=1, le=90)):
-    rows = await store.all()
-    total = len(rows)
-    category_breakdown: Dict[str, int] = {}
-    priority_breakdown: Dict[str, int] = {}
-    channel_breakdown: Dict[str, int] = {}
-    sentiment_distribution: Dict[str, int] = {}
-    open_count = 0
-    auto_sent_count = 0
-
-    for r in rows:
-        t = r["ticket"]
-        if t.get("status") in ("open", "in_progress", None):
-            open_count += 1
-        if r["auto_sent"]:
-            auto_sent_count += 1
-        for field, bucket in (
-            ("category", category_breakdown),
-            ("priority", priority_breakdown),
-            ("channel", channel_breakdown),
-            ("sentiment", sentiment_distribution),
-        ):
-            val = t.get(field)
-            if val:
-                bucket[val] = bucket.get(val, 0) + 1
-
+    agg = await store.analytics()
+    total = agg["total"]
     return SupportAnalytics(
         total_tickets=total,
-        open_tickets=open_count,
-        first_contact_resolution_rate=(auto_sent_count / total) if total else None,
-        category_breakdown=category_breakdown,
-        priority_breakdown=priority_breakdown,
-        channel_breakdown=channel_breakdown,
-        sentiment_distribution=sentiment_distribution,
+        open_tickets=agg["open"],
+        first_contact_resolution_rate=(agg["auto_sent"] / total) if total else None,
+        category_breakdown=agg["category_breakdown"],
+        priority_breakdown=agg["priority_breakdown"],
+        channel_breakdown=agg["channel_breakdown"],
+        sentiment_distribution=agg["sentiment_distribution"],
     )
 
 

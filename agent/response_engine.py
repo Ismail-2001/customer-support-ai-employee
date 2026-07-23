@@ -124,14 +124,22 @@ class ResponseGenerationEngine:
             fallback_model_name=self.fallback_model_name,
         )
         latency_ms = (time.monotonic() - start) * 1000
-        raw: _RawSuggestion = raw_result["parsed"]
+        parsed: _RawSuggestion | None = raw_result.get("parsed")
+        if parsed is None:
+            logger.error("llm_parse_failed", stage="response_generation", ticket_id=ticket.id)
+            parsed = _RawSuggestion(
+                suggested_response="I'm sorry, I wasn't able to generate a proper response. A human agent will follow up shortly.",
+                confidence=0.0,
+                reasoning="LLM returned unparseable result — safe default applied.",
+                requires_human_review=True,
+            )
 
         # Belt-and-suspenders: enforce the hard policy rules in code too,
         # never trust the model alone to gate auto-send-eligible categories.
-        has_action = bool(raw.suggested_action and raw.suggested_action.type != "none")
+        has_action = bool(parsed.suggested_action and parsed.suggested_action.type != "none")
         requires_review = (
-            raw.requires_human_review
-            or raw.confidence < 0.85
+            parsed.requires_human_review
+            or parsed.confidence < 0.85
             or classification.category.value in {"refund", "complaint"}
             or classification.sentiment.value == "very_negative"
             or has_action
@@ -140,19 +148,19 @@ class ResponseGenerationEngine:
         suggested_action = None
         if has_action:
             suggested_action = SuggestedAction(
-                type=ActionType(raw.suggested_action.type),
-                order_id=raw.suggested_action.order_id or ticket.order_id,
-                amount=raw.suggested_action.amount,
-                reason=raw.suggested_action.reason,
+                type=ActionType(parsed.suggested_action.type),
+                order_id=parsed.suggested_action.order_id or ticket.order_id,
+                amount=parsed.suggested_action.amount,
+                reason=parsed.suggested_action.reason,
             )
 
         suggestion = ResponseSuggestion(
             ticket_id=ticket.id,
-            suggested_response=raw.suggested_response,
-            confidence=raw.confidence,
-            reasoning=raw.reasoning,
+            suggested_response=parsed.suggested_response,
+            confidence=parsed.confidence,
+            reasoning=parsed.reasoning,
             requires_human_review=requires_review,
-            follow_up_questions=raw.follow_up_questions,
+            follow_up_questions=parsed.follow_up_questions,
             suggested_action=suggested_action,
         )
 

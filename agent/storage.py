@@ -23,9 +23,12 @@ CREATE TABLE IF NOT EXISTS tickets (
     data TEXT NOT NULL,
     suggestion TEXT,
     auto_sent INTEGER DEFAULT 0,
+    gorgias_ticket_id TEXT,
     created_at TEXT NOT NULL,
     updated_at TEXT NOT NULL
 );
+
+CREATE INDEX IF NOT EXISTS idx_tickets_gorgias_id ON tickets(gorgias_ticket_id);
 
 CREATE TABLE IF NOT EXISTS messages (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -123,11 +126,23 @@ class TicketStore:
         logger.info("ticket_store_ready", db_path=self.db_path)
 
     async def _migrate_traces(self, db):
-        """Add prompt_version column to traces table if it doesn't exist (v1→v2 migration)."""
+        """Apply schema migrations in order."""
         cursor = await db.execute("PRAGMA table_info(traces)")
         columns = [row[1] for row in await cursor.fetchall()]
         if "prompt_version" not in columns:
             await db.execute("ALTER TABLE traces ADD COLUMN prompt_version TEXT")
+
+        cursor = await db.execute("PRAGMA table_info(tickets)")
+        ticket_cols = [row[1] for row in await cursor.fetchall()]
+        if "gorgias_ticket_id" not in ticket_cols:
+            await db.execute("ALTER TABLE tickets ADD COLUMN gorgias_ticket_id TEXT")
+            await db.execute(
+                "UPDATE tickets SET gorgias_ticket_id = json_extract(data, '$.gorgias_ticket_id')"
+                " WHERE gorgias_ticket_id IS NULL"
+            )
+        await db.execute(
+            "CREATE INDEX IF NOT EXISTS idx_tickets_gorgias_id ON tickets(gorgias_ticket_id)"
+        )
 
     async def save(
         self,
@@ -136,18 +151,23 @@ class TicketStore:
         auto_sent: bool = False,
     ) -> None:
         now = datetime.utcnow().isoformat()
+        gorgias_id = ticket.gorgias_ticket_id or (
+            ticket.metadata.get("gorgias_ticket_id") if isinstance(ticket.metadata, dict) else None
+        )
         async with aiosqlite.connect(self.db_path) as db:
             await db.execute(
-                """INSERT INTO tickets (id, data, suggestion, auto_sent, created_at, updated_at)
-                   VALUES (?, ?, ?, ?, ?, ?)
+                """INSERT INTO tickets (id, data, suggestion, auto_sent, gorgias_ticket_id, created_at, updated_at)
+                   VALUES (?, ?, ?, ?, ?, ?, ?)
                    ON CONFLICT(id) DO UPDATE SET
                      data=excluded.data, suggestion=excluded.suggestion,
-                     auto_sent=excluded.auto_sent, updated_at=excluded.updated_at""",
+                     auto_sent=excluded.auto_sent, gorgias_ticket_id=excluded.gorgias_ticket_id,
+                     updated_at=excluded.updated_at""",
                 (
                     ticket.id,
                     ticket.model_dump_json(),
                     suggestion.model_dump_json() if suggestion else None,
                     int(auto_sent),
+                    gorgias_id,
                     ticket.created_at,
                     now,
                 ),
@@ -193,6 +213,44 @@ class TicketStore:
             rows = await cursor.fetchall()
             return [self._row_to_dict(r) for r in rows]
 
+    async def analytics(self) -> Dict[str, Any]:
+        """Aggregate ticket stats via SQL — avoids loading all rows into memory."""
+        async with aiosqlite.connect(self.db_path) as db:
+            db.row_factory = aiosqlite.Row
+            cursor = await db.execute("SELECT COUNT(*) as total FROM tickets")
+            total = (await cursor.fetchone())["total"]
+
+            cursor = await db.execute(
+                "SELECT COUNT(*) as cnt FROM tickets WHERE auto_sent = 1"
+            )
+            auto_sent = (await cursor.fetchone())["cnt"]
+
+            cursor = await db.execute(
+                """SELECT
+                    json_extract(data, '$.status') as val, COUNT(*) as cnt
+                   FROM tickets WHERE json_extract(data, '$.status') IN ('open', 'in_progress')
+                   OR json_extract(data, '$.status') IS NULL GROUP BY val"""
+            )
+            open_count = sum(r["cnt"] for r in await cursor.fetchall())
+
+            def _breakdown(col: str) -> Dict[str, int]:
+                cursor = db.execute(
+                    f"SELECT json_extract(data, '$.{col}') as val, COUNT(*) as cnt"
+                    f" FROM tickets WHERE json_extract(data, '$.{col}') IS NOT NULL"
+                    f" AND json_extract(data, '$.{col}') != '' GROUP BY val"
+                )
+                return {r["val"]: r["cnt"] for r in cursor.fetchall()}
+
+            return {
+                "total": total,
+                "open": open_count,
+                "auto_sent": auto_sent,
+                "category_breakdown": _breakdown("category"),
+                "priority_breakdown": _breakdown("priority"),
+                "channel_breakdown": _breakdown("channel"),
+                "sentiment_distribution": _breakdown("sentiment"),
+            }
+
     async def update_status(self, ticket_id: str, **updates) -> Optional[Dict[str, Any]]:
         existing = await self.get(ticket_id)
         if not existing:
@@ -216,11 +274,16 @@ class TicketStore:
         return SupportTicket(**row["ticket"])
 
     async def get_ticket_by_gorgias_id(self, gorgias_ticket_id: str) -> Optional[SupportTicket]:
-        rows = await self.all()
-        for r in rows:
-            if r["ticket"].get("gorgias_ticket_id") == str(gorgias_ticket_id):
-                return SupportTicket(**r["ticket"])
-        return None
+        async with aiosqlite.connect(self.db_path) as db:
+            db.row_factory = aiosqlite.Row
+            cursor = await db.execute(
+                "SELECT data FROM tickets WHERE gorgias_ticket_id = ? LIMIT 1",
+                (str(gorgias_ticket_id),),
+            )
+            row = await cursor.fetchone()
+            if not row:
+                return None
+            return SupportTicket(**json.loads(row["data"]))
 
     async def add_message(self, ticket_id: str, sender_type: str, content: str) -> TicketMessage:
         now = datetime.utcnow().isoformat()

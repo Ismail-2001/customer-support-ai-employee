@@ -9,6 +9,7 @@ response_engine.py use.
 """
 
 import time
+import re
 from typing import List, Optional
 
 import structlog
@@ -16,7 +17,7 @@ import structlog
 from agent.config import settings
 from agent.conversation import format_transcript
 from agent.llm import get_fallback_llm, get_llm, invoke_with_fallback
-from agent.models import ClassificationResult, SupportTicket, TicketMessage
+from agent.models import ClassificationResult, Sentiment, SupportTicket, TicketCategory, TicketMessage, TicketPriority
 from agent.observability import record_llm_call
 
 logger = structlog.get_logger(__name__)
@@ -97,7 +98,23 @@ class TicketClassifier:
             fallback_model_name=self.fallback_model_name,
         )
         latency_ms = (time.monotonic() - start) * 1000
-        result: ClassificationResult = raw_result["parsed"]
+
+        parsed: ClassificationResult | None = raw_result.get("parsed")
+        if parsed is None:
+            logger.error("llm_parse_failed", stage="classification", ticket_id=ticket.id)
+            parsed = ClassificationResult(
+                category=TicketCategory.OTHER,
+                priority=TicketPriority.NORMAL,
+                sentiment=Sentiment.NEUTRAL,
+                reasoning="LLM returned unparseable result — safe default applied.",
+            )
+        if parsed.extracted_order_number:
+            sanitized = re.sub(r"[^A-Za-z0-9#\-]", "", parsed.extracted_order_number)[:40]
+            if sanitized != parsed.extracted_order_number:
+                logger.warning("llm_output_sanitized", field="extracted_order_number",
+                               before=parsed.extracted_order_number, after=sanitized)
+                parsed.extracted_order_number = sanitized
+        result = parsed
 
         await record_llm_call(
             ticket_id=ticket.id, stage="classification", model=actual_model,
