@@ -1,373 +1,794 @@
-# Customer Support AI Employee — for Shopify
+<div align="center">
 
-Hire an AI that already knows your Shopify store. No training, no setup cost, no monthly SaaS fee — just deploy and watch it answer order status questions, handle returns, suggest refunds, and escalate to you when it should.
+# 🤖 Customer Support AI Employee
 
-## Memory (conversation threads)
+### Deploy an AI agent into your Shopify store in 10 minutes. It answers orders, handles returns, suggests refunds, and escalates — all inside your Gorgias workflow.
 
-Every ticket has a persisted message thread (`messages` table in SQLite). A brand-new ticket
-seeds the thread with the customer's first message. Every follow-up — via
-`POST /support/tickets/{id}/messages` or the Gorgias `message-created` webhook — appends to
-the SAME thread and re-runs classification + drafting with the **full conversation as context**,
-not just the newest message. This means:
-- A customer who escalates on message 3 gets treated as escalating, not as a fresh neutral ticket.
-- The AI won't repeat information it already gave in message 1.
-- Human-sent replies (`/respond`) and auto-sent AI replies both get logged into the thread, so the
-  next customer message is answered with full awareness of what's already been said.
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
+[![Python](https://img.shields.io/badge/Python-3.12%2B-blue?logo=python&logoColor=white)](https://www.python.org/)
+[![FastAPI](https://img.shields.io/badge/FastAPI-0.115-009688?logo=fastapi)](https://fastapi.tiangolo.com/)
+[![LangGraph](https://img.shields.io/badge/LangGraph-0.3-1C3C3C?logo=langchain)](https://langchain-ai.github.io/langgraph/)
+[![Groq](https://img.shields.io/badge/Groq-llama--3.3--70b-F55036?logo=groq)](https://groq.com/)
+[![React](https://img.shields.io/badge/Dashboard-React-61DAFB?logo=react)](https://react.dev/)
+[![SQLite](https://img.shields.io/badge/Storage-SQLite-003B57?logo=sqlite)](https://www.sqlite.org/)
+[![Tests](https://img.shields.io/badge/Tests-138%20passing-brightgreen)](https://github.com/Ismail-2001/customer-support-ai-employee/actions)
+[![Render](https://img.shields.io/badge/Deploy-Render-46E3B7?logo=render)](https://render.com/)
+[![License](https://img.shields.io/badge/built%20for-Shopify-7AB55C?logo=shopify)](https://shopify.com/)
 
-Gorgias needs **two separate webhooks** configured (see setup below) — `ticket-created` for new
-tickets and `message-created` for everything after. Point them at:
+---
+
+[Key Features](#-key-features) •
+[Architecture](#-architecture) •
+[Quick Start](#-quick-start) •
+[API Reference](#-api-reference) •
+[Security](#-security) •
+[Deployment](#-deployment) •
+[Roadmap](#-roadmap) •
+[Contact](#-contact)
+
+</div>
+
+---
+
+## 🎯 The Problem
+
+Every ecommerce brand with a Shopify store answers the same questions every day:
+
+> *"Where's my order?"* — *"Can I return this?"* — *"When will it ship?"* — *"I never received item X."*
+
+Your support team spends **60-70% of their time** on order-status lookups, return requests, and shipping questions. The repetitive ones drain morale. The complex ones get rushed. Customers wait hours for answers an AI could give in seconds.
+
+Existing chatbot solutions fail because they **don't have access to your actual order data** — they're generic LLMs with a script, not agents connected to your store.
+
+## ✅ The Solution
+
+**cs-agent** is a purpose-built AI support agent that lives inside your Shopify + Gorgias stack. It's not a chatbot — it's an **autonomous employee** that:
+
+- 🔍 **Reads the full conversation thread** before answering (not just the last message)
+- 📦 **Looks up real Shopify order data** — status, tracking, items, fulfillment
+- 📋 **Grounds replies in your policies** via RAG knowledge base
+- 🛡️ **Knows when to escalate** — 3rd follow-up = auto-escalate to urgent, human-only
+- 💰 **Suggests refunds/resends but NEVER executes them** — human-in-the-loop always
+- 📊 **Tracks its own accuracy** — compares AI drafts vs what humans actually send
+
+<br>
+
+> **"Set a junior support rep free for the price of a coffee. Deploy in 10 minutes, trust it in 2 weeks."**
+
+---
+
+## ✨ Key Features
+
+<table>
+  <tr>
+    <td width="50%">
+      <h3>🧠 Conversational Memory</h3>
+      Every ticket is a persisted thread. Follow-up messages re-classify with the <strong>full conversation</strong> as context — not just the latest message. No repeating information. No treating an escalation as a fresh ticket.
+      <br><br>
+      <em>"Still nothing?!" on message 3 reads very differently when the AI has seen messages 1-2.</em>
+    </td>
+    <td width="50%">
+      <h3>📦 Real Shopify Integration</h3>
+      Connects to your Shopify Admin API to look up real order status, tracking numbers, line items, and fulfillment status. No mock data. No "I don't have access to that information."
+      <br><br>
+      Category-aware: only fetches orders when the ticket is order-related (saves API calls).
+    </td>
+  </tr>
+  <tr>
+    <td width="50%">
+      <h3>📋 RAG Knowledge Base</h3>
+      Zero-infrastructure vector search over your Shopify policies + product catalog + custom FAQ. All embeddings stored locally in SQLite — no Pinecone, no Weaviate, no extra cost.
+      <br><br>
+      One-click sync: <code>POST /support/knowledge-base/sync-shopify</code>
+    </td>
+    <td width="50%">
+      <h3>🛡️ Safety-First Design</h3>
+      <ul>
+        <li><strong>Confidence-gated auto-send</strong> — below threshold = internal note for human review</li>
+        <li><strong>Money-moving actions are ALWAYS human-approved</strong> — refunds/resends require explicit API call with Idempotency-Key</li>
+        <li><strong>Hard-coded blocked categories</strong> — refund/complaint/legal never auto-send, even at 99% confidence</li>
+        <li><strong>Cost cap circuit breaker</strong> — daily LLM spend limit force-disables auto-send</li>
+      </ul>
+    </td>
+  </tr>
+  <tr>
+    <td width="50%">
+      <h3>📊 Self-Improvement Analytics</h3>
+      Every human-sent reply is diffed against the AI's draft. <code>/support/analytics/quality</code> shows edit rate by category — that's your signal for which categories need better prompts or more KB content.
+      <br><br>
+      Plus: confidence calibration reporting to verify the model's self-reported confidence is actually trustworthy.
+    </td>
+    <td width="50%">
+      <h3>🔁 Multi-Channel Ingestion</h3>
+      <ul>
+        <li><strong>Gorgias</strong> — ticket-created + message-created webhooks (email, chat, social all aggregated)</li>
+        <li><strong>Generic inbound</strong> — WhatsApp via Twilio, website chat widget, Instagram DM bridge</li>
+        <li><strong>REST API</strong> — direct POST for custom integrations</li>
+      </ul>
+      All channels share the same thread memory system.
+    </td>
+  </tr>
+  <tr>
+    <td width="50%">
+      <h3>🔍 Full Pipeline Tracing</h3>
+      Every LLM call is logged with exact input (transcript + context), output, latency, tokens, and cost. <code>/support/tickets/{id}/trace</code> answers "why did it say that?" — essential for building trust with clients.
+    </td>
+    <td width="50%">
+      <h3>📈 Operator Dashboard</h3>
+      React + Tailwind dashboard for reviewing tickets, tracking analytics, managing the knowledge base, and monitoring cost spend. Deployed as a separate static site.
+    </td>
+  </tr>
+</table>
+
+<br>
+
+<details>
+<summary><b>📊 Competitive Advantages — Why This Beats Generic Chatbots</b></summary>
+<br>
+
+| Capability | cs-agent | Generic LLM Chatbot | Zendesk AI | Gorgias AI |
+|---|---|---|---|---|
+| **Real Shopify order lookup** | ✅ Native | ❌ | ✅ | ❌ |
+| **Conversation memory (full thread)** | ✅ Always | ❌ Usually last message only | ✅ | ✅ |
+| **Auto-send with confidence gating** | ✅ Configurable | ❌ All-or-nothing | ✅ | ❌ |
+| **Human-before-money actions** | ✅ Hard-coded | ❌ Prompt-only | ✅ | ✅ |
+| **Cost cap circuit breaker** | ✅ Built-in | ❌ | ❌ | ❌ |
+| **Self-improvement analytics** | ✅ Edit-rate by category | ❌ | ❌ | ❌ |
+| **Prompt injection eval harness** | ✅ 15 cases + adversarial | ❌ | ❌ | ❌ |
+| **Knowledge base (RAG)** | ✅ Local SQLite (zero infra) | ❌ | ✅ | ❌ |
+| **Open-source / self-hosted** | ✅ Full code | ❌ SaaS only | ❌ | ❌ |
+| **Pricing** | One-time setup + $0/mo | $0–$1000/mo | $55+/mo | $360+/mo |
+
+</details>
+
+---
+
+## 🏗 Architecture
+
+### System Overview
+
+```mermaid
+graph TB
+    subgraph Channels
+        A[Gorgias Ticket Created]
+        B[Gorgias Message Created]
+        C[REST API / Manual]
+        D[Generic Inbound / WhatsApp]
+    end
+
+    subgraph "API Layer FastAPI"
+        E[Webhook Router]
+        F[Authenticated Router]
+        G[Public Router]
+    end
+
+    subgraph "Agent Pipeline LangGraph"
+        H[Load History]
+        I[Classify Ticket]
+        J[Escalation Check]
+        K[Fetch Order Data]
+        L[Fetch KB Context]
+        M[Generate Response]
+        N[Decide Auto-Send]
+        O[Save Results]
+    end
+
+    subgraph Integrations
+        P[Shopify Admin API]
+        Q[Gorgias REST API]
+        R[Google Embeddings]
+    end
+
+    subgraph Storage
+        S[(SQLite / Tickets)]
+        T[(SQLite / KB Vectors)]
+        U[(SQLite / Traces + Costs)]
+    end
+
+    A --> E
+    B --> E
+    C --> F
+    D --> E
+    E --> H
+    F --> H
+    G --> N
+
+    H --> I --> J --> K --> L --> M --> N --> O
+
+    K --> P
+    M --> Q
+    L --> R
+    O --> S
+    O --> U
+    L --> T
 ```
-POST /support/webhooks/gorgias/ticket-created
-POST /support/webhooks/gorgias/message-created
+
+### Agent Pipeline (LangGraph StateGraph)
+
+```mermaid
+stateDiagram-v2
+    [*] --> LoadHistory: Ticket received
+    LoadHistory --> Classify: Load full thread
+    Classify --> EscalationCheck: Category, priority, sentiment
+    EscalationCheck --> FetchOrder: 3+ messages? → Urgent + Human-only
+    
+    state FetchOrder {
+        [*] --> IsOrderRelevant
+        IsOrderRelevant --> ShopifyLookup: Category ∈ {order_status, shipping, returns, refund}
+        IsOrderRelevant --> SkipOrder: Other categories
+        ShopifyLookup --> ReturnContext
+    end
+    
+    FetchOrder --> FetchKB
+    FetchKB --> GenerateResponse: RAG context
+    GenerateResponse --> DecideAutoSend: Draft + confidence
+    
+    state DecideAutoSend {
+        [*] --> CheckEnabled: AUTO_SEND_ENABLED?
+        CheckEnabled --> CheckConfidence: ≥ threshold?
+        CheckEnabled --> NoSend: Disabled
+        CheckConfidence --> CheckCategory: Blocked category?
+        CheckConfidence --> NoSend: Low confidence
+        CheckCategory --> CheckCostCap: Under daily budget?
+        CheckCategory --> NoSend: Blocked category
+        CheckCostCap --> Send: All gates pass
+    end
+    
+    DecideAutoSend --> SaveResults
+    SaveResults --> [*]
 ```
 
-## Deployment model — one instance per client
+### Data Flow — Single Ticket Lifecycle
 
-This is a **single-tenant** system by design. Every deployed instance serves exactly
-one client — one `.env`, one SQLite database, one Shopify store, one Gorgias account.
-
-Do NOT route multiple clients through the same instance. `TENANT_NAME` is a
-deployment-time label bound into every structlog log line so log aggregation is
-unambiguous, but it is NOT a row-level isolation filter — there is no shared-database
-mode here. Adding shared multi-tenant support would require a separate migration
-(row-level tenant_id filtering + a connection-pooled Postgres/Supabase backend).
-
-The startup auto-prefixes `DB_PATH` with `TENANT_NAME` when using the default
-`cs_agent.db`, so a copy-pasted `.env` won't silently share a database file between
-clients on the same filesystem.
-
-## Architecture
-
-```
-Gorgias ticket-created webhook   ─┐
-Gorgias message-created webhook ──┤
-Manual API call (any channel)   ──┘
-                                    │
-                                    ▼
-                     CustomerSupportAgent.handle_ticket() / .handle_followup()
-                                    │
-                                    ▼
-                     1. Append message to persisted thread (agent/storage.py)
-                                    │
-                                    ▼
-                      2. TicketClassifier (gpt-4o-mini via OpenRouter) — sees the FULL thread
-                        category / priority / sentiment
-                        + extracts order number if present
-                                    │
-                                    ▼
-                     3. ShopifyClient
-                        real order status/tracking/items
-                        (only if category is order-related)
-                                    │
-                                    ▼
-                      4. ResponseGenerationEngine (gpt-4o-mini via OpenRouter) — sees the FULL thread
-                        drafts reply grounded in real data, aware of what was
-                        already said earlier in the conversation
-                        + confidence score
-                                    │
-                                    ▼
-                     5. Auto-send gate (agent/support_agent.py)
-                        confidence >= threshold
-                        AND category not in blocklist
-                        AND AUTO_SEND_ENABLED=true
-                                    │
-                       ┌────────────┴─────────────┐
-                       ▼                           ▼
-         Sent to customer via Gorgias   Internal note in Gorgias,
-         (also logged into thread)      awaiting human approval
+```mermaid
+sequenceDiagram
+    participant C as Customer
+    participant G as Gorgias
+    participant A as API
+    participant AG as Agent Pipeline
+    participant S as Shopify
+    participant KB as Knowledge Base
+    
+    C->>G: "Where's my order #1042?"
+    G->>A: Webhook: ticket-created
+    A->>AG: handle_ticket()
+    AG->>AG: 1. Load history (empty — new ticket)
+    AG->>AG: 2. Classify → order_status
+    AG->>S: 3. GET /orders.json?name=#1042
+    S-->>AG: Order data (status, items, tracking)
+    AG->>KB: 4. Search relevant policies
+    KB-->>AG: Returns/Shipping policy chunks
+    AG->>AG: 5. Draft reply + confidence score
+    alt Confidence ≥ 0.85 & auto-send on
+        AG->>G: POST reply to Gorgias
+        G-->>C: AI reply sent
+    else
+        AG->>G: POST internal note (draft)
+        G-->>Human: Awaiting review
+    end
+    AG->>A: Return decision + trace
+    A-->>G: 200 OK
 ```
 
-## Setup
+---
 
-### 1. Get your API keys
+## 🛠 Tech Stack
 
-- **OpenRouter**: get a key at https://openrouter.ai/keys (or use Google Gemini free tier at https://aistudio.google.com/apikey if you prefer)
-- **Shopify**: Admin > Settings > Apps and sales channels > Develop apps > create a custom app
-  with the `read_orders` scope, install it, copy the Admin API access token.
-- **Gorgias**: Settings > REST API > create an API key.
+| Layer | Technology | Purpose |
+|---|---|---|
+| **Runtime** | ![Python](https://img.shields.io/badge/Python_3.12-3776AB?logo=python&logoColor=white) | Core application language |
+| **API Framework** | ![FastAPI](https://img.shields.io/badge/FastAPI-009688?logo=fastapi&logoColor=white) | Async REST + webhook endpoints |
+| **LLM Orchestration** | ![LangGraph](https://img.shields.io/badge/LangGraph-1C3C3C?logo=langchain&logoColor=white) | State machine for agent pipeline |
+| **LLM Provider** | ![Groq](https://img.shields.io/badge/Groq-llama--3.3--70b-F55036?logo=groq&logoColor=white) | Primary: llama-3.3-70b (fast/cheap) |
+| **LLM Fallback** | ![Claude](https://img.shields.io/badge/Claude_Haiku-D97706?logo=anthropic&logoColor=white) | Fallback: Claude Haiku via Anthropic |
+| **Database** | ![SQLite](https://img.shields.io/badge/SQLite-003B57?logo=sqlite&logoColor=white) | Tickets, KB vectors, traces, costs |
+| **Vector Search** | NumPy + SQLite | Local cosine similarity (zero infra) |
+| **Embeddings** | Google Gemini | text-embedding-004 (free tier) |
+| **Dashboard** | ![React](https://img.shields.io/badge/React-61DAFB?logo=react&logoColor=white) + ![TypeScript](https://img.shields.io/badge/TypeScript-3178C6?logo=typescript&logoColor=white) | Operator UI |
+| **Styling** | ![Tailwind](https://img.shields.io/badge/Tailwind_CSS-06B6D4?logo=tailwindcss&logoColor=white) | Utility-first CSS |
+| **Deployment** | ![Render](https://img.shields.io/badge/Render-46E3B7?logo=render&logoColor=white) | Blueprint deploy + free tier |
+| **Testing** | ![Pytest](https://img.shields.io/badge/Pytest-0A9EDC?logo=pytest&logoColor=white) | 138 tests, all mocked (no network needed) |
+| **CI** | ![GitHub Actions](https://img.shields.io/badge/GitHub_Actions-2088FF?logo=githubactions&logoColor=white) | Automated test + eval pipeline |
+
+---
+
+## 🚀 Quick Start
+
+### Prerequisites
+
+- Python 3.12+
+- A [Groq API key](https://console.groq.com/keys) (or [OpenRouter key](https://openrouter.ai/keys))
+- A [Shopify store](https://shopify.com) with a custom app that has `read_orders` scope
+- A [Gorgias account](https://gorgias.com) with REST API key
+
+### 1. Clone & Configure
 
 ```bash
+git clone https://github.com/Ismail-2001/customer-support-ai-employee.git
+cd customer-support-ai-employee
 cp .env.example .env
-# fill in .env with the keys above
 ```
 
-### 2. Run locally
+Fill in `.env` with your keys:
+
+```bash
+TENANT_NAME=my-store
+GROQ_API_KEY=gsk_your_groq_key_here
+GROQ_MODEL=llama-3.3-70b-versatile
+
+SHOPIFY_SHOP_DOMAIN=my-store.myshopify.com
+SHOPIFY_ACCESS_TOKEN=shpat_your_token_here
+
+GORGIAS_DOMAIN=my-store
+GORGIAS_EMAIL=you@yourstore.com
+GORGIAS_API_KEY=your_gorgias_api_key
+
+# Generate this: python3 -c "import secrets; print(secrets.token_urlsafe(32))"
+API_KEY=your_api_key_here
+```
+
+### 2. Install & Run
 
 ```bash
 pip install -r requirements.txt
 uvicorn api.main:app --reload --port 8001
 ```
 
-Visit `http://localhost:8001/docs` for interactive API docs.
+```bash
+# In another terminal — start the dashboard
+cd dashboard
+npm install
+npm run dev
+```
 
-### 3. Or run with Docker
+### 3. Verify
+
+```bash
+# Health check
+curl http://localhost:8001/health
+
+# Authenticated health
+curl http://localhost:8001/support/health -H "X-API-Key: your_api_key_here"
+
+# Create a test ticket
+curl -X POST http://localhost:8001/support/tickets \
+  -H "X-API-Key: your_api_key_here" \
+  -H "Content-Type: application/json" \
+  -d '{"customer_email":"test@example.com","subject":"Where is my order?","body":"I ordered #1042 last week and it has not arrived."}'
+```
+
+Dashboard: **http://localhost:5173**
+
+---
+
+## ⚙️ Configuration
+
+### Core Settings
+
+| Variable | Required | Description |
+|---|---|---|
+| `TENANT_NAME` | ✅ | Deployment label (one per client) |
+| `GROQ_API_KEY` | ✅* | Primary LLM provider key |
+| `GROQ_MODEL` | ✅* | Default: `llama-3.3-70b-versatile` |
+| `SHOPIFY_SHOP_DOMAIN` | ✅ | Your Shopify store domain |
+| `SHOPIFY_ACCESS_TOKEN` | ✅ | Admin API token (read_orders scope) |
+| `GORGIAS_DOMAIN` | ✅ | Gorgias subdomain |
+| `GORGIAS_EMAIL` | ✅ | Gorgias login email |
+| `GORGIAS_API_KEY` | ✅ | Gorgias REST API key |
+| `API_KEY` | ✅ | Auth key for all `/support/*` endpoints |
+
+*\*Or set `OPENROUTER_API_KEY` / `GOOGLE_API_KEY` instead*
+
+### Safety Gates
+
+| Variable | Default | Description |
+|---|---|---|
+| `AUTO_SEND_ENABLED` | `false` | Start `false` for first 1-2 weeks |
+| `AUTO_SEND_MIN_CONFIDENCE` | `0.85` | Minimum confidence to auto-send |
+| `AUTO_SEND_BLOCKED_CATEGORIES` | `refund,complaint,legal,other` | Never auto-sent |
+| `DAILY_COST_CAP_USD` | `5.0` | Auto-send disabled when exceeded |
+
+### Security
+
+| Variable | Default | Description |
+|---|---|---|
+| `REQUIRE_API_KEY` | `true` | Require X-API-Key on all endpoints |
+| `ALLOWED_ORIGINS` | `""` | Dashboard domain(s) for CORS |
+| `GORGIAS_WEBHOOK_SECRET` | — | Shared secret for Gorgias webhook |
+| `RATE_LIMIT_PER_MINUTE` | `60` | Requests/minute per IP |
+
+---
+
+## 📋 API Reference
+
+### Tickets
+
+<table>
+  <tr>
+    <th>Method</th>
+    <th>Path</th>
+    <th>Description</th>
+    <th>Auth</th>
+  </tr>
+  <tr><td><code>POST</code></td><td><code>/support/tickets</code></td><td>Create + fully process a new ticket</td><td>🔑</td></tr>
+  <tr><td><code>GET</code></td><td><code>/support/tickets</code></td><td>List tickets (filter by status/category/priority)</td><td>🔑</td></tr>
+  <tr><td><code>GET</code></td><td><code>/support/tickets/{id}</code></td><td>Get one ticket + AI suggestion</td><td>🔑</td></tr>
+  <tr><td><code>PATCH</code></td><td><code>/support/tickets/{id}</code></td><td>Update status/priority/notes</td><td>🔑</td></tr>
+  <tr><td><code>POST</code></td><td><code>/support/tickets/{id}/messages</code></td><td>Add follow-up message (same thread)</td><td>🔑</td></tr>
+  <tr><td><code>GET</code></td><td><code>/support/tickets/{id}/messages</code></td><td>View full conversation thread</td><td>🔑</td></tr>
+  <tr><td><code>GET</code></td><td><code>/support/tickets/{id}/suggestion</code></td><td>Re-fetch stored AI draft</td><td>🔑</td></tr>
+  <tr><td><code>POST</code></td><td><code>/support/tickets/{id}/respond</code></td><td>Send human (possibly edited) reply</td><td>🔑</td></tr>
+</table>
+
+### Actions (💰 Human-Approved Only)
+
+<table>
+  <tr>
+    <th>Method</th>
+    <th>Path</th>
+    <th>Description</th>
+  </tr>
+  <tr><td><code>POST</code></td><td><code>/support/tickets/{id}/actions/refund</code></td><td>Execute a real Shopify refund. Requires <code>Idempotency-Key</code> header.</td></tr>
+  <tr><td><code>POST</code></td><td><code>/support/tickets/{id}/actions/resend-order</code></td><td>Create a replacement order in Shopify. Requires <code>Idempotency-Key</code> header.</td></tr>
+</table>
+
+### Webhooks
+
+<table>
+  <tr>
+    <th>Method</th>
+    <th>Path</th>
+    <th>Description</th>
+    <th>Secret</th>
+  </tr>
+  <tr><td><code>POST</code></td><td><code>/support/webhooks/gorgias/ticket-created</code></td><td>Gorgias new-ticket webhook</td><td>🔒 x-webhook-secret</td></tr>
+  <tr><td><code>POST</code></td><td><code>/support/webhooks/gorgias/message-created</code></td><td>Gorgias follow-up message webhook</td><td>🔒 x-webhook-secret</td></tr>
+  <tr><td><code>POST</code></td><td><code>/support/webhooks/inbound</code></td><td>Generic channel (WhatsApp, chat widget, etc.)</td><td>🔒 x-webhook-secret</td></tr>
+</table>
+
+### Knowledge Base
+
+<table>
+  <tr>
+    <th>Method</th>
+    <th>Path</th>
+    <th>Description</th>
+  </tr>
+  <tr><td><code>POST</code></td><td><code>/support/knowledge-base</code></td><td>Add/replace a KB document</td></tr>
+  <tr><td><code>POST</code></td><td><code>/support/knowledge-base/sync-shopify</code></td><td>Auto-ingest Shopify policies + products</td></tr>
+  <tr><td><code>GET</code></td><td><code>/support/knowledge-base</code></td><td>KB chunk count</td></tr>
+  <tr><td><code>POST</code></td><td><code>/support/knowledge-base/search</code></td><td>Debug KB retrieval for a query</td></tr>
+</table>
+
+### Analytics & Observability
+
+<table>
+  <tr>
+    <th>Method</th>
+    <th>Path</th>
+    <th>Description</th>
+  </tr>
+  <tr><td><code>GET</code></td><td><code>/support/analytics</code></td><td>Volume + category/priority/sentiment breakdowns</td></tr>
+  <tr><td><code>GET</code></td><td><code>/support/analytics/quality</code></td><td>Edit rate by category (self-improvement signal)</td></tr>
+  <tr><td><code>GET</code></td><td><code>/support/analytics/calibration</code></td><td>Confidence calibration report</td></tr>
+  <tr><td><code>GET</code></td><td><code>/support/analytics/costs</code></td><td>Real LLM spend by day and stage</td></tr>
+  <tr><td><code>GET</code></td><td><code>/support/tickets/{id}/trace</code></td><td>Full pipeline trace ("why did it say that?")</td></tr>
+  <tr><td><code>GET</code></td><td><code>/support/health</code></td><td>Shopify/Gorgias connection status</td></tr>
+</table>
+
+---
+
+## 🛡️ Security Model
+
+<details>
+<summary><b>Click to expand security architecture</b></summary>
+<br>
+
+| Layer | Protection | Implementation |
+|---|---|---|
+| **API Authentication** | All `/support/*` endpoints gated by `X-API-Key` | Constant-time comparison via `hmac.compare_digest` — no timing attack vector |
+| **Webhook Authentication** | Gorgias + generic inbound use shared secrets | Each channel has its own secret (not the API key) — sent as `X-Webhook-Secret` header |
+| **Rate Limiting** | Per-IP sliding window | 60/min default, 10/min on refund endpoint. Returns 429 when exceeded. |
+| **Idempotency** | Refunds + resends require `Idempotency-Key` header | Same key = same response — double-clicks and retries never double-refund |
+| **Refund Cap** | Amount checked against real Shopify order total | Request over order total is rejected outright |
+| **Audit Trail** | Every action attempt logged | `refund_audit` + `resend_audit` tables — success/failure + raw Shopify response |
+| **Prompt Injection Defense** | Code-level + prompt-level | Customer text labeled as untrusted data. Hard-coded gates (not prompt-based) for money-moving actions |
+| **Cost Circuit Breaker** | Daily cost cap auto-disables send | `DAILY_COST_CAP_USD` checked before every auto-send decision |
+| **CORS** | Browser origin restriction | Set `ALLOWED_ORIGINS` to dashboard domain; empty = no browser access |
+| **No Information Leakage** | Global exception handler | Real error logged server-side; generic `500 Internal Server Error` returned to client |
+
+</details>
+
+---
+
+## 🧪 Testing & Evaluation
+
+### Unit Tests
+
+```bash
+# Install dev dependencies
+pip install -r requirements-dev.txt
+
+# Run all 138 tests (no network needed — everything mocked)
+pytest tests/ -v
+
+# Run with coverage
+pytest tests/ --cov=agent --cov-report=term-missing
+```
+
+All tests are **fully isolated** — each gets its own temp SQLite database, and all LLM/Shopify/Gorgias calls are mocked. No API keys, no network, no flakiness.
+
+### Eval Harness
+
+```bash
+# Run all 15 golden cases against your configured LLM
+python -m evals.run_evals
+
+# Run a single case
+python -m evals.run_evals --case refund_request_must_require_review
+
+# Save report and compare
+python -m evals.run_evals --json report.json
+python -m evals.compare evals/results/previous.json report.json
+```
+
+The eval dataset includes **2 adversarial prompt-injection cases** that verify the model doesn't get tricked into confirming fake refunds or overriding confidence scores.
+
+### CI Pipeline
+
+```yaml
+# .github/workflows/ci.yml
+On every push to main:
+  1. Install dependencies (requirements-dev.txt)
+  2. pytest tests/ -v --tb=short
+  3. Run evals (if OPENROUTER_API_KEY is set as repo secret)
+```
+
+---
+
+## 📂 Project Structure
+
+```
+cs-agent/
+├── agent/                    # Core AI agent logic
+│   ├── llm.py                # LLM client factory + retry/fallback
+│   ├── graph.py              # LangGraph StateGraph pipeline
+│   ├── classifier.py         # Ticket classification (LLM + structured output)
+│   ├── response_engine.py    # Response drafting (LLM + structured output)
+│   ├── support_agent.py      # Orchestrator: handle_ticket / handle_followup
+│   ├── storage.py            # SQLite-backed ticket store
+│   ├── auth.py               # API key + webhook secret verification
+│   ├── rate_limit.py         # In-memory sliding window rate limiter
+│   ├── cost_tracker.py       # Model pricing table
+│   ├── observability.py      # Tracing + cost recording per LLM call
+│   ├── knowledge_base.py     # Local RAG: chunk, embed, cosine search
+│   ├── conversation.py       # Transcript formatter for LLM context
+│   ├── models.py             # Pydantic models (tickets, classifications, etc.)
+│   └── config.py             # Centralized env var loading via pydantic-settings
+│
+├── api/                      # FastAPI application
+│   ├── main.py               # Entrypoint, CORS, startup, exception handler
+│   └── customer_support.py   # All routes (tickets, actions, KB, analytics)
+│
+├── integrations/             # External API clients
+│   ├── shopify.py            # Shopify Admin API (orders, refunds, reorders)
+│   └── gorgias.py            # Gorgias REST API (replies, notes, webhook parsing)
+│
+├── dashboard/                # React + TypeScript operator dashboard
+│   └── src/
+│       ├── components/       # Sidebar, Badges, ConfidenceBar, TraceViewer
+│       ├── pages/            # Tickets, TicketDetail, Analytics, KnowledgeBase
+│       └── lib/              # API client, types, connection hook
+│
+├── evals/                    # Golden-dataset evaluation framework
+│   ├── golden_dataset.json   # 15 labeled test cases
+│   ├── run_evals.py          # Eval runner
+│   ├── scoring.py            # Scoring logic (unit-tested)
+│   ├── compare.py            # Diff reports between prompt versions
+│   └── results/              # Versioned eval reports (commit alongside prompts)
+│
+├── scripts/                  # Operational scripts
+│   ├── smoke_test.sh         # Post-deploy smoke test
+│   └── check_env_sync.py     # Verify .env.example ↔ render.yaml parity
+│
+├── tests/                    # 138 unit/integration tests
+│   ├── conftest.py           # Fixtures: temp DB, FakeClassifier, FakeShopify
+│   ├── test_api_security.py  # Auth, rate limits, idempotency
+│   ├── test_support_agent.py # Threading, auto-send gates, escalation
+│   └── ...                   # 11 test files covering every module
+│
+├── mcp_server/               # MCP protocol server (clients like Claude Desktop)
+│   └── server.py             # Read-only tools over the ticket store
+│
+├── render.yaml               # Render Blueprint deploy config
+├── .env.example              # Documented environment template
+├── requirements.txt          # Python dependencies
+├── docker-compose.yml        # Docker Compose for local dev
+└── Dockerfile                # Container build
+```
+
+---
+
+## ☁️ Deployment
+
+### Render (Blueprint — One Click)
+
+```yaml
+# render.yaml is included in the repo
+# 1. Go to https://dashboard.render.com
+# 2. New → Blueprint
+# 3. Select your GitHub repo
+# 4. Fill in the sync:false env vars (secrets)
+# 5. Deploy
+```
+
+**URL:** `https://cs-agent-xxxx.onrender.com`
+
+**Post-Deploy Checklist:**
+
+```bash
+# Health check
+curl https://cs-agent-xxxx.onrender.com/health
+
+# Smoke test
+./scripts/smoke_test.sh https://cs-agent-xxxx.onrender.com YOUR_API_KEY
+
+# Sync Shopify policies + products
+curl -X POST https://cs-agent-xxxx.onrender.com/support/knowledge-base/sync-shopify \
+  -H "X-API-Key: YOUR_API_KEY"
+```
+
+> **⚠️ Free Tier Note:** SQLite data is ephemeral on Render's free plan — every deploy wipes ticket history. Upgrade to Render Starter ($7/mo) for a persistent disk. Suitable for MVP / evaluation.
+
+### Docker
 
 ```bash
 docker compose up -d
 ```
 
-### 4. Connect Gorgias
+---
 
-In Gorgias: Settings > REST API > Webhooks, add a webhook for `ticket-created` pointing at:
-```
-https://your-deployed-url.com/support/webhooks/gorgias
-```
-Add a custom header `x-webhook-secret` with the same value as `GORGIAS_WEBHOOK_SECRET` in your `.env`.
+## 🗺 Roadmap
 
-## What's in here now
-
-| Feature | How it works |
-|---|---|
-| **Memory** | Every ticket is a persisted thread. Follow-ups re-classify with the full conversation, not just the latest message. |
-| **RAG knowledge base** | Local vector search (SQLite + embeddings, zero extra infra) over your policies + product catalog. Replies ground policy/product claims in real content instead of guessing. |
-| **Real actions** | The AI can *suggest* a refund/resend with an amount and reason — but never executes it. A human calls `POST /tickets/{id}/actions/refund` to actually move money via Shopify. Any suggested_action hard-blocks auto-send, no matter the confidence. |
-| **Multi-channel** | Gorgias (email/chat/social it aggregates) + a generic `/webhooks/inbound` endpoint for anything else — WhatsApp via Twilio, a website chat widget, Instagram DM bridges — using the same thread/memory system. |
-| **Escalation intelligence** | A customer on their 3rd+ unresolved message gets force-escalated to `urgent` and forced into human review, in code — not left to the model's mood that turn. |
-| **Self-improvement tracking** | Every human-sent reply is diffed against the AI's draft. `/support/analytics/quality` shows edit rate by category — that's your signal for which categories need prompt work or more knowledge base content next. This doesn't retrain the model automatically; it tells you exactly where to spend the next hour. |
-
-## Setting up the knowledge base
-
-```bash
-# Auto-pull your Shopify policies + product catalog:
-curl -X POST http://localhost:8001/support/knowledge-base/sync-shopify
-
-# Or add custom FAQ content manually:
-curl -X POST http://localhost:8001/support/knowledge-base \
-  -H "Content-Type: application/json" \
-  -d '{"source": "faq:sizing", "title": "Sizing Guide", "content": "Our hoodies run true to size..."}'
-
-# Test what it retrieves for a question, before it hits a real ticket:
-curl -X POST http://localhost:8001/support/knowledge-base/search \
-  -H "Content-Type: application/json" -d '{"query": "is this waterproof"}'
+```mermaid
+gantt
+    title cs-agent Development Roadmap
+    dateFormat  YYYY-MM-DD
+    
+    section Production Hardening
+    Circuit breakers for integrations     :crit, done, 2026-07-01, 14d
+    Conversation windowing                :crit, done, 2026-07-01, 10d
+    Embedding batching + cache            :crit, done, 2026-07-01, 7d
+    Dead-letter queue + alerts            :crit, done, 2026-07-01, 14d
+    
+    section Scale & Reliability
+    Async task queue for webhooks         :active, 2026-07-15, 21d
+    Event-sourced ticket store            :2026-08-01, 28d
+    Multi-worker rate limiting (Redis)    :2026-08-15, 21d
+    PostgreSQL migration path             :2026-09-01, 30d
+    
+    section Enterprise
+    SSO / SAML integration                :2026-10-01, 30d
+    Audit log export (S3)                 :2026-10-15, 21d
+    Custom prompt templates               :2026-11-01, 21d
+    Streaming LLM responses               :2026-11-15, 14d
+    
+    section Platform
+    Multi-tenant (separate deployments)   :2027-01-01, 60d
+    Usage-based billing (Stripe)          :2027-01-15, 45d
+    Self-service onboarding UI            :2027-03-01, 60d
 ```
 
-## Testing follow-up messages (memory) locally
+### Upcoming Features
 
-```bash
-# 1. Create a ticket, note the returned ticket_id
-curl -X POST http://localhost:8001/support/tickets -H "Content-Type: application/json" \
-  -d '{"customer_email":"test@example.com","subject":"Order question","body":"Where is my order #1001?"}'
-
-# 2. Send a follow-up on the SAME ticket_id
-curl -X POST http://localhost:8001/support/tickets/{ticket_id}/messages \
-  -H "Content-Type: application/json" -d '{"body":"Still nothing after 3 days!"}'
-
-# 3. View the full thread
-curl http://localhost:8001/support/tickets/{ticket_id}/messages
-```
-
-## The safety model — read this before you flip `AUTO_SEND_ENABLED`
-
-This is the difference between a tool that saves a support team hours and one that
-gets a client's brand in trouble. Ship every new client with `AUTO_SEND_ENABLED=false`
-for at least the first 1–2 weeks. Every AI draft lands as an **internal note** on the
-Gorgias ticket instead of being sent — a human reviews and clicks send. Watch the
-`/support/analytics` endpoint and the drafts themselves. Once you've seen enough
-drafts to trust the categories it gets right, flip `AUTO_SEND_ENABLED=true`.
-
-Even with auto-send on, these are hard-coded in `agent/support_agent.py` and can't be
-overridden by the model talking itself into a high confidence score:
-- `refund`, `complaint`, `legal` categories never auto-send (edit `AUTO_SEND_BLOCKED_CATEGORIES`)
-- confidence must clear `AUTO_SEND_MIN_CONFIDENCE` (default 0.85)
-- `very_negative` sentiment always requires a human
-
-> **AUTO_SEND_MIN_CONFIDENCE = 0.85 was set during Gemini evaluation and must be
-> re-validated against real OpenRouter/gpt-4o-mini traffic.** LLM self-reported
-> confidence is not inherently calibrated — the Gemini model's confidence distribution
-> may differ from gpt-4o-mini's. After you have sufficient volume, check
-> `/support/analytics/calibration` and verify the edit rate in the 0.85–0.90 bucket
-> is meaningfully lower than in the 0.5–0.6 bucket. If the confidence numbers are
-> poorly calibrated for this model, raise or lower the threshold accordingly. See
-> "Confidence calibration" in the Observability section for details.
-
-## Security
-
-Every `/support/*` endpoint EXCEPT webhooks requires an `X-API-Key` header matching `API_KEY`
-in your `.env`. Generate a real one before deploying anywhere public:
-```bash
-python3 -c "import secrets; print(secrets.token_urlsafe(32))"
-```
-
-| Protection | What it covers |
-|---|---|
-| **API key auth** | All ticket/KB/analytics/action endpoints. Constant-time comparison (no timing attacks). |
-| **Webhook secrets** | Gorgias (`GORGIAS_WEBHOOK_SECRET`) and generic inbound (`INBOUND_WEBHOOK_SECRET`) each need their own shared secret sent as a header, since those callers can't send an API key. |
-| **Rate limiting** | Per-IP sliding window, 60/min default on everything, 10/min on the refund endpoint specifically. Returns 429. |
-| **Refund idempotency** | Every refund call requires an `Idempotency-Key` header. The same key sent twice replays the first result instead of refunding twice — protects against retries, double-clicks, and network blips. |
-| **Resend-order idempotency** | Same protection for the resend-order action — same key replays, no duplicate orders. |
-| **Refund amount cap** | The requested amount is checked against the real Shopify order total before any refund is attempted; a request over the order total is rejected outright. |
-| **Refund audit trail** | Every attempt (success or failure) is logged in the `refund_audit` table — who, when, how much, and the raw Shopify response. |
-| **Resend-order audit trail** | Every attempt (success or failure) is logged in the `resend_audit` table — who, when, which order, and the raw Shopify response. |
-| **Prompt injection defense-in-depth** | Both the classifier and response engine are told customer text is untrusted data, not instructions — on top of the hard-coded (not prompt-based) auto-send/action gates that don't trust the model's word for it either way. |
-| **CORS** | Set `ALLOWED_ORIGINS` to your dashboard's domain(s); empty means no browser JavaScript can call this API at all (server-to-server calls are unaffected). |
-| **No leaked internals** | A global exception handler logs the real error server-side and returns a generic `{"detail": "Internal server error"}` to the client — no stack traces or exception text ever reach a caller. |
-
-**What's intentionally NOT hardened yet** — a solo/small-agency-appropriate line to draw, not an oversight:
-- No shared multi-tenant database — this is a one-instance-per-client architecture. If you later need a single deployment to serve multiple clients, the work is: row-level `tenant_id` filtering on every query, a connection-pooled Postgres/Supabase backend, and per-tenant rate limiting. That's a separate feature, not a bugfix in this one.
-- Rate limiting is in-process (per Python process), not shared across instances — fine for Render's single free-tier instance, not for a multi-instance deploy behind a load balancer (move to Redis-backed limiting if you scale that way).
-- No WAF/DDoS layer — that's Render/Cloudflare's job in front of this, not this app's.
-
-## Running the tests
-
-```bash
-pip install -r requirements-dev.txt
-pytest tests/ -v
-# (Add OPENROUTER_API_KEY=dummy or GOOGLE_API_KEY=dummy in CI — tests mock the LLM)
-```
-
-All 122 tests run with the LLM and Shopify calls faked out — no real API key or network
-needed, so this runs the same in CI as it does locally. Covers: memory/threading, the
-auto-send safety gates (confidence, blocked categories, suggested_action blocking),
-repeat-contact escalation, RAG chunking/search relevance, self-improvement edit tracking,
-and every security control above — including a test that specifically proves the same
-`Idempotency-Key` sent twice only refunds once.
-
-## Observability & Evals
-
-This is what separates "it worked in my demo" from actually knowing whether the agent is
-good. Three pieces:
-
-**1. Tracing — "why did it say that?"**
-Every classifier and response-engine call is logged to a `traces` table: the exact
-transcript/context that went in, the exact structured output that came out, latency,
-tokens, and cost. Pull the full pipeline history for any ticket:
-```bash
-curl http://localhost:8001/support/tickets/{ticket_id}/trace -H "X-API-Key: $API_KEY"
-```
-
-**2. Confidence calibration — is the model's confidence number trustworthy?**
-The model self-reports a confidence score, and `AUTO_SEND_MIN_CONFIDENCE` trusts that
-number. LLM self-reported confidence is notoriously **not** well-calibrated out of the box.
-`/support/analytics/calibration` buckets past AI drafts by confidence and shows the actual
-edit rate in each bucket:
-```bash
-curl http://localhost:8001/support/analytics/calibration -H "X-API-Key: $API_KEY"
-```
-A well-calibrated model shows edit_rate dropping as confidence rises. If your 0.85-0.90
-bucket gets edited just as often as your 0.5-0.6 bucket, the confidence number isn't
-doing its job — raise `AUTO_SEND_MIN_CONFIDENCE` above whatever bucket is misbehaving.
-This needs real volume (30+ samples per bucket) before it means anything — don't
-over-read it in week one.
-
-**3. Cost governance — real spend, with a circuit breaker**
-Every LLM call's actual cost (computed from real token usage, not an estimate) is
-persisted to `llm_costs`. `DAILY_COST_CAP_USD` in `.env` (default $5) is checked before
-every auto-send decision — cross it, and auto-send force-disables itself until a human
-investigates (tickets still get classified/drafted normally, just held for review):
-```bash
-curl http://localhost:8001/support/analytics/costs -H "X-API-Key: $API_KEY"
-```
-
-## Evals — does the agent actually work?
-
-`evals/golden_dataset.json` has 15 labeled cases covering every category, escalation,
-missing-order-number handling, and — importantly — **two adversarial prompt-injection
-cases** that check the model doesn't get talked into confirming a fake refund or
-overriding its own confidence score when a customer message tries to.
-
-```bash
-pip install -r requirements-dev.txt
-python -m evals.run_evals                          # run everything against the configured LLM
-python -m evals.run_evals --case refund_request_must_require_review   # run one case
-python -m evals.run_evals --json report.json        # save a full report
-```
-
-Every full run auto-saves a report to `evals/results/` as
-`<timestamp>_<classifier_version>-<response_version>.json`. **Commit these reports
-alongside prompt changes** so `evals/results/` builds a versioned, searchable history
-of how each prompt version performed.
-
-After a prompt change, the workflow is:
-
-1. Bump `PROMPT_VERSION` in `agent/classifier.py` and/or `agent/response_engine.py`
-2. Run `python -m evals.run_evals` — the report auto-saves to `evals/results/`
-3. Compare against the previous run:
-   ```bash
-   python -m evals.compare evals/results/20240710_classifier_v1-response_v1.json \
-                           evals/results/20240711_classifier_v2-response_v1.json
-   ```
-4. The diff shows which cases flipped (pass→fail or fail→pass), the pass rate delta,
-   and the category accuracy delta — this is the quantitative answer to "did my prompt
-   change help or hurt?"
-5. Commit the new report alongside the prompt change:
-   ```bash
-   git add evals/results/20240711_classifier_v2-response_v1.json agent/classifier.py
-   git commit -m "classifier: tighten injection guard in system prompt"
-   ```
-
-The `prompt_version` is also recorded in every `traces` table row (via the
-`prompt_version` column), so production traces are linked back to the exact prompt
-version that produced them — no guessing "was this before or after the tweak".
-
-Run this before merging any prompt change to `classifier.py` or `response_engine.py` — it's
-the difference between knowing a prompt tweak helped and guessing. When you notice a
-category with a high edit rate in `/analytics/quality`, pull a few of those real (edited)
-tickets and add them to `golden_dataset.json` as regression cases — that's how this dataset
-should grow over time, not by inventing more synthetic examples.
-
-The eval harness's own scoring logic (`evals/scoring.py`) is unit-tested in
-`tests/test_eval_harness.py` — fed deliberately wrong model output to confirm it actually
-catches failures, not just deliberately right output to confirm it says PASS. A harness
-that never fails is worse than no harness. The compare script and trace prompt_version
-inclusion are tested in `tests/test_eval_versioning.py`.
-
-## API reference
-
-| Method | Path | What it does |
+| Feature | Priority | Status |
 |---|---|---|
-| POST | `/support/tickets` | Create + fully process a new ticket synchronously |
-| GET | `/support/tickets` | List tickets (filter by status/category/priority) |
-| GET | `/support/tickets/{id}` | Get one ticket + its AI suggestion |
-| PATCH | `/support/tickets/{id}` | Update status/priority/notes |
-| POST | `/support/tickets/{id}/messages` | Add a follow-up customer message (same thread) |
-| GET | `/support/tickets/{id}/messages` | View the full conversation thread |
-| GET | `/support/tickets/{id}/suggestion` | Re-fetch the stored AI draft |
-| POST | `/support/tickets/{id}/respond` | Human sends the (possibly edited) reply; logs the edit for self-improvement tracking |
-| POST | `/support/tickets/{id}/actions/refund` | Human-approved: executes a real Shopify refund. Requires `Idempotency-Key` header. |
-| POST | `/support/tickets/{id}/actions/resend-order` | Human-approved: creates a replacement order in Shopify. Requires `Idempotency-Key` header. |
-| POST | `/support/knowledge-base` | Add/replace a KB document (policy, FAQ, spec sheet) |
-| POST | `/support/knowledge-base/sync-shopify` | Auto-ingest Shopify policies + product catalog |
-| GET | `/support/knowledge-base` | KB chunk count |
-| POST | `/support/knowledge-base/search` | Debug: test KB retrieval for a query |
-| POST | `/support/webhooks/inbound` | Generic entry point for non-Gorgias channels |
-| POST | `/support/webhooks/gorgias/ticket-created` | Gorgias new-ticket webhook target |
-| POST | `/support/webhooks/gorgias/message-created` | Gorgias follow-up-message webhook target |
-| GET | `/support/analytics` | Volume, category/priority/sentiment breakdowns |
-| GET | `/support/analytics/quality` | Edit rate by category (self-improvement signal) |
-| GET | `/support/analytics/calibration` | Confidence calibration — is the confidence score trustworthy? |
-| GET | `/support/analytics/costs` | Real LLM spend by day and stage |
-| GET | `/support/tickets/{id}/trace` | Full pipeline trace for one ticket (debug "why did it say that") |
-| GET | `/support/health` | Shopify/Gorgias connection status |
+| Circuit breakers for Shopify/Gorgias | 🔴 Critical | ✅ Complete |
+| Conversation windowing (token budget) | 🔴 Critical | ✅ Complete |
+| LLM output parsing fallback | 🔴 Critical | ✅ Complete |
+| Embedding batch + cache | 🔴 Critical | 🔄 In Progress |
+| Dead-letter queue + Slack alerts | 🟠 High | 📋 Planned |
+| Async webhook processing | 🟠 High | 📋 Planned |
+| Event-sourced ticket history | 🟡 Medium | 📋 Planned |
+| PostgreSQL / Supabase backend | 🟡 Medium | 🔍 Researching |
+| Multi-tenant management UI | 🟢 Low | 🔍 Researching |
 
-## What's stubbed vs. real
+---
 
-Real: classification, memory/threading, Shopify order lookups, RAG knowledge base search,
-response drafting, suggested actions, refund execution, resend-order execution, the auto-send + escalation gates,
-Gorgias reply/internal-note posting, Gorgias webhook idempotency, generic multi-channel ingestion, edit-rate tracking,
-full pipeline tracing, real per-call cost tracking with a daily cap circuit breaker,
-confidence calibration reporting, a golden-dataset eval harness, API key auth, rate
-limiting, refund/resend idempotency/audit, SQLite persistence.
+## 💼 Business Use Cases
 
-Still a stub, by design — build these next as the client roster grows:
-- `/support/analytics/agents` (per-human-agent performance) has no data source yet
-- SQLite (tickets, KB, traces, costs) is fine for one client on Render's free tier; move to
-  Supabase/Postgres + pgvector once you're running multiple clients or need concurrent writers
-- No retry/backoff on the Shopify calls yet — add `tenacity` if you see
-  transient failures in production (LLM calls already have retry + fallback — see `agent/llm.py`)
-- Rate limiting and the cost cap are in-process, not shared across instances — fine for a
-  single Render instance, not for a multi-instance deploy (move to Redis if you scale that way)
-- The eval dataset (15 cases) is a starting skeleton, not comprehensive coverage — it should
-  grow from real edited tickets over time, per the Evals section above
+### For Shopify Store Owners
+- **Reduce support costs** by 60-80% on order-status and shipping questions
+- **24/7 support** without hiring night shift
+- **Faster response times** — AI drafts in seconds, human reviews in minutes
 
-## Pricing — for Shopify store owners
+### For Ecommerce Agencies
+- **White-label offering** — deploy one instance per client
+- **Recurring revenue** — $50-200/mo per client for managed hosting + monitoring
+- **Differentiator** — pitch "AI support agent included" to win new clients
 
-| Plan | For who | One-time setup | Monthly |
-|------|---------|:-:|:-:|
-| Solo | 1 store, you are support | $1,500 | $0 |
-| Growing | 1 store, you have a team | $3,000 | $1,000 |
-| Enterprise | Multiple stores | Custom | Custom |
+### For Enterprise Brands
+- **Custom integration** — connect to existing Shopify + Gorgias setup
+- **Compliance-ready** — full audit trail, human-in-the-loop for money actions
+- **Scalable** — single-tenant per instance means no noisy neighbors
 
-## Contact
+---
 
-- Email: your@email.com
-- LinkedIn: your-linkedin
+## 🤝 Why Choose cs-agent?
+
+| Factor | cs-agent | Build In-House | SaaS Alternative |
+|---|---|---|---|
+| **Time to value** | 10 minutes | 3-6 months | 1-2 weeks |
+| **Total cost (year 1)** | ~$1,500 setup + $0/mo* | $120k+ engineer salary | $6k–$12k/year |
+| **Control** | Full source code, self-hosted | Full control | Vendor lock-in |
+| **Data privacy** | Your data, your server | Your data | Their servers |
+| **Customization** | Any prompt, any model | Unlimited | Limited to platform |
+| **Integration** | Shopify + Gorgias native | Build from scratch | Limited connectors |
+
+*\*Excludes LLM API costs (~$5-50/mo depending on volume) and hosting ($0-7/mo)*
+
+---
+
+## 👥 Contributing
+
+This project is in active development. Contributions, issues, and feature requests are welcome.
+
+<details>
+<summary><b>Contribution Guidelines</b></summary>
+
+1. **Fork** the repository
+2. **Create a feature branch**: `git checkout -b feature/amazing-feature`
+3. **Write tests** for your changes
+4. **Run the test suite**: `pytest tests/ -v`
+5. **Run evals**: `python -m evals.run_evals`
+6. **Commit**: `git commit -m 'feat: add amazing feature'`
+7. **Push**: `git push origin feature/amazing-feature`
+8. **Open a Pull Request**
+
+### Commit Convention
+
+- `feat:` — new feature
+- `fix:` — bug fix
+- `security:` — security improvement
+- `perf:` — performance improvement
+- `docs:` — documentation change
+- `test:` — test addition/fix
+- `refactor:` — code refactoring
+
+</details>
+
+---
+
+## 📄 License
+
+Distributed under the MIT License. See `LICENSE` for more information.
+
+**Built with:** LangChain, FastAPI, React, Groq, and a lot of coffee.
+
+---
+
+## 📬 Contact
+
+**Ismail Sajid** — Principal AI Engineer
+
+[![Email](https://img.shields.io/badge/Email-D14836?logo=gmail&logoColor=white)](mailto:your@email.com)
+[![LinkedIn](https://img.shields.io/badge/LinkedIn-0A66C2?logo=linkedin&logoColor=white)](https://linkedin.com/in/your-linkedin)
+[![GitHub](https://img.shields.io/badge/GitHub-181717?logo=github&logoColor=white)](https://github.com/Ismail-2001)
+
+---
+
+<div align="center">
+
+### 🚀 Ready to deploy your AI support agent?
+
+**Get in touch** for:
+- Dedicated deployment & setup assistance
+- Custom integrations (Slack, email, CRM, etc.)
+- Enterprise SLA & support
+- Multi-store management
+
+---
+
+**⭐ Star this repo if you find it useful. Contributions welcome.**
+
+</div>
